@@ -1,7 +1,7 @@
 ---
 title: "Scoragami! Using Markov Chains to Model Unique NFL Game Scores"
 author: "Austin Redmond"
-date: "15/11/2019"
+date: "26/11/2019"
 output: html_document
 ---
 
@@ -9,11 +9,27 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-##Scoragami!
-##Using Markov Chains to Model Unique NFL Game Scores
+# Abstract
 
-##Abstract
+# Introduction
 
-##Introduction
+# Literature Review
 
-##Literature Review
+# Methodology
+
+### Data Scraping
+  
+#### nflscrapR Installation
+
+nflscrapR is an R package that is used to "utilize and analyze data from the National Football League (NFL) API". It is necessary to install it in order to scrape data pertaining to NFL box scores. The nflscrapR package can be found at https://github.com/maksimhorowitz/nflscrapR. The devtools package can install R packages hosted on Github.
+  
+```{r Installation, message=FALSE}
+library(devtools)
+
+#Install nflscrapR from Github using devtools.
+devtools::install_github(repo = "maksimhorowitz/nflscrapR")
+```
+
+# Works Cited
+
+Horowitz, Marksim. "Introducing the nflscrapR Package." Github, https://github.com/maksimhorowitz/nflscrapR. Accessesd 15 November 2019.
