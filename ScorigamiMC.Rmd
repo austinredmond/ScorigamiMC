@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, root.dir = "~/GitHub/ScorigamiMC")
 ```
 
 # Abstract
@@ -66,9 +66,7 @@ devtools::install_github(repo = "maksimhorowitz/nflscrapR")
 scrapedGameIDs <- multi_scrape_game_ids(2009:2018, c("reg", "post"))
 head(scrapedGameIDs)
 
-setwd("~/GitHub/ScoragamiMC") 
 save(scrapedGameIDs, file = "scrapedGameIDs.Rda")
-
 
 ```
 
@@ -82,23 +80,7 @@ Horowitz, Marksim. "Introducing the nflscrapR Package." Github, https://github.c
 https://seahawkswire.usatoday.com/2018/12/03/seahawks-continue-bizarre-scorigami-streak-under-pete-carroll/
 
 ```{r Testing}
-scrapedGameIDsColNames <- c("type", "game_id", "home_team", "away_team", "week", "season", "state_of_game", "game_url", "home_score", "away_score")
-#Create scraped game IDs data frame with a matching number of coluformns.
-scrapedGameIDst <- as.data.frame(matrix(,0,length(scrapedGameIDsColNames)))
-#Rename columns ofscraped game IDs  data frame.
-names(scrapedGameIDst) <- scrapedGameIDsColNames
 
-seasons <- c(2017, 2018)
-types <- c("pre", "post")
-weeks <- NULL
-teams <- NULL
-
-for(s in seasons) {
-  for(ty in types) {
-     scrapedGameIDst <- rbind(scrapedGameIDst, scrape_game_ids(s, ty))
-  }
-}
-
-x <- 2009:2018
+scrapedGameIDs <- load("scrapedGameIDs.Rda")
 ```
 
