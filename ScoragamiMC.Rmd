@@ -1,5 +1,5 @@
 ---
-title: "Scoragami! Using Markov Chains to Model Unique NFL Game Scores"
+title: "Scorigami! Using Markov Chains to Model Unique NFL Game Scores"
 author: "Austin Redmond"
 date: "26/11/2019"
 output: html_document
@@ -11,15 +11,43 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Abstract
 
+
+
 # Introduction
+
+"Scorigami is the art of achieving a final score in an NFL game that has never happened before. It is a term made up by Jon Bois, a concept perfected by Pete Carroll, and a goal that may not be completed before the heat death of the universe."
 
 # Literature Review
 
 # Methodology
 
-### Data Scraping
+### My Library
+
+```{r My Library}
+multi_scrape_game_ids <- function(seasons, types, weeks = NULL, teams = NULL) {
+  library(nflscrapR)
   
-#### nflscrapR Installation
+  #Schema of the scraped game IDs data frame.
+  scrapedGameIDsColNames <- c("type", "game_id", "home_team", "away_team", "week", "season", "state_of_game", "game_url", "home_score", "away_score")
+  #Create scraped game IDs data frame with a matching number of coluformns.
+  scrapedGameIDs <- as.data.frame(matrix(,0,length(scrapedGameIDsColNames)))
+  #Rename columns ofscraped game IDs  data frame.
+  names(scrapedGameIDs) <- scrapedGameIDsColNames
+  
+  for(s in seasons) {
+    for(ty in types) {
+      scrapedGameIDs <- rbind(scrapedGameIDs, scrape_game_ids(s, ty, weeks = weeks, teams = teams))
+    }
+  }
+  
+  return(scrapedGameIDs)
+} 
+```
+
+
+### Data Scraping
+
+#### Install nflscrapR
 
 nflscrapR is an R package that is used to "utilize and analyze data from the National Football League (NFL) API". It is necessary to install it in order to scrape data pertaining to NFL box scores. The nflscrapR package can be found at https://github.com/maksimhorowitz/nflscrapR. The devtools package can install R packages hosted on Github.
   
@@ -28,8 +56,49 @@ library(devtools)
 
 #Install nflscrapR from Github using devtools.
 devtools::install_github(repo = "maksimhorowitz/nflscrapR")
+
 ```
+
+#### Scrape Game IDs
+
+```{r Scrape Game IDS, message=FALSE}
+
+scrapedGameIDs <- multi_scrape_game_ids(2009:2018, c("reg", "post"))
+head(scrapedGameIDs)
+
+setwd("~/GitHub/ScoragamiMC") 
+save(scrapedGameIDs, file = "scrapedGameIDs.Rda")
+
+
+```
+
 
 # Works Cited
 
+https://www.youtube.com/watch?v=9l5C8cGMueY
+
 Horowitz, Marksim. "Introducing the nflscrapR Package." Github, https://github.com/maksimhorowitz/nflscrapR. Accessesd 15 November 2019.
+
+https://seahawkswire.usatoday.com/2018/12/03/seahawks-continue-bizarre-scorigami-streak-under-pete-carroll/
+
+```{r Testing}
+scrapedGameIDsColNames <- c("type", "game_id", "home_team", "away_team", "week", "season", "state_of_game", "game_url", "home_score", "away_score")
+#Create scraped game IDs data frame with a matching number of coluformns.
+scrapedGameIDst <- as.data.frame(matrix(,0,length(scrapedGameIDsColNames)))
+#Rename columns ofscraped game IDs  data frame.
+names(scrapedGameIDst) <- scrapedGameIDsColNames
+
+seasons <- c(2017, 2018)
+types <- c("pre", "post")
+weeks <- NULL
+teams <- NULL
+
+for(s in seasons) {
+  for(ty in types) {
+     scrapedGameIDst <- rbind(scrapedGameIDst, scrape_game_ids(s, ty))
+  }
+}
+
+x <- 2009:2018
+```
+
