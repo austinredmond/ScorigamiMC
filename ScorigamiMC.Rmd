@@ -41,7 +41,19 @@ multi_scrape_game_ids <- function(seasons, types, weeks = NULL, teams = NULL) {
   }
   
   return(scrapedGameIDs)
-} 
+}
+
+multi_scrape_game_play_by_play <- function(gameIDs) {
+  #Schema of the scraped game play-by-play.
+  View(gameIDs)
+  scrapedGamedPlayByPlay <- as.data.frame(scrape_game_play_by_play(gameIDs[1,"game_id"], gameIDs[1,"type"], gameIDs[1,"season"])[0,])
+  
+  for(i in gameIDs$game_id) {
+    scrapedGamedPlayByPlay <- rbind(scrapedGamedPlayByPlay, scrape_game_play_by_play(gameIDs[i,"game_id"], gameIDs[i,"type"], gameIDs[i,"season"]))
+  }
+  
+  return(scrapedGamedPlayByPlay)
+}
 ```
 
 
@@ -70,6 +82,19 @@ save(scrapedGameIDs, file = "scrapedGameIDs.Rda")
 
 ```
 
+#### Scrape Game Play-by-Play
+
+```{r}
+load("scrapedGameIDs.Rda")
+
+scrapedGamedPlayByPlay <- multi_scrape_game_play_by_play(scrapedGameIDs)
+head(scrapedGamedPlayByPlay)
+
+save(scrapedGamedPlayByPlay, file = "scrapedGamePlayByPlay.Rda")
+
+```
+
+
 
 # Works Cited
 
@@ -82,5 +107,23 @@ https://seahawkswire.usatoday.com/2018/12/03/seahawks-continue-bizarre-scorigami
 ```{r Testing}
 
 scrapedGameIDs <- load("scrapedGameIDs.Rda")
+
+prmatrix(matrix(paste(colnames(initialData), ": ", sapply(initialData, class), sep=""), nrow = 7, ncol = 7), rowlab=rep("",7), collab=rep("",7))
+
+x <- scrape_game_play_by_play(2018111900, "reg", 2018, check_url = 1)
+x <- as.data.frame(x)
+
+prmatrix(matrix(paste(colnames(x), ": ", sapply(x, class), sep=""), nrow = 86, ncol = 3), rowlab=rep("",86), collab=rep("",3))
+class(x)
+View(cbind(x[x$quarter_end == 1,]$total_away_score, x[x$quarter_end == 1,]$total_home_score))
+
+class(x)
+unique(x$PlayType)
+View(x[x$PlayType=="Quarter End" | x$PlayType=="End of Game",])
+
+scrapedGameIDs <- scrape_game_play_by_play(scrapedGameIDs[1,"game_id"], scrapedGameIDs[1,"type"], scrapedGameIDs[1,"season"])
+
+scrapedGamedPlayByPlay <- as.data.frame(scrape_game_play_by_play(scrapedGameIDs[1,"game_id"], scrapedGameIDs[1,"type"], scrapedGameIDs[1,"season"])[0,])
+
 ```
 
