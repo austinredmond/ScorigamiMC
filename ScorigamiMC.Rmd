@@ -1,17 +1,14 @@
 ---
-title: "Scorigami! Using Markov Chains to Model Unique NFL Game Scores"
+title: "Scorigami!"
+subtitle: "Using Markov Chains to Model Unique NFL Game Scores"
 author: "Austin Redmond"
-date: "26/11/2019"
+date: "3/12/2019"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, root.dir = "~/GitHub/ScorigamiMC")
 ```
-
-# Abstract
-
-
 
 # Introduction
 
@@ -24,32 +21,38 @@ knitr::opts_chunk$set(echo = TRUE, root.dir = "~/GitHub/ScorigamiMC")
 ### My Library
 
 ```{r My Library}
+
 multi_scrape_game_ids <- function(seasons, types, weeks = NULL, teams = NULL) {
   library(nflscrapR)
   
   #Schema of the scraped game IDs data frame.
   scrapedGameIDsColNames <- c("type", "game_id", "home_team", "away_team", "week", "season", "state_of_game", "game_url", "home_score", "away_score")
-  #Create scraped game IDs data frame with a matching number of coluformns.
+  #Create scraped game IDs data frame with a matching number of columns.
   scrapedGameIDs <- as.data.frame(matrix(,0,length(scrapedGameIDsColNames)))
-  #Rename columns ofscraped game IDs  data frame.
+  #Rename columns of scraped game IDs data frame.
   names(scrapedGameIDs) <- scrapedGameIDsColNames
   
+  #Loop for each season and each type of game (which is either preseason, regular season, or postseason).
   for(s in seasons) {
     for(ty in types) {
+      #Bind the data scraped so far with the data scraped using the current season, game type, week, and team information.
       scrapedGameIDs <- rbind(scrapedGameIDs, scrape_game_ids(s, ty, weeks = weeks, teams = teams))
     }
   }
   
+  #Return the scraped gamed IDs data frame.
   return(scrapedGameIDs)
 }
 
 multi_scrape_game_play_by_play <- function(gameIDs) {
-  #Schema of the scraped game play-by-play.
-  View(gameIDs)
+  library(nflscrapR)  
+  #Create empty data frame using the first entry of gameIDS to get the correct schema for scraped game play play-by-play. 
   scrapedGamedPlayByPlay <- as.data.frame(scrape_game_play_by_play(gameIDs[1,"game_id"], gameIDs[1,"type"], gameIDs[1,"season"])[0,])
-  
-  for(i in gameIDs$game_id) {
-    scrapedGamedPlayByPlay <- rbind(scrapedGamedPlayByPlay, scrape_game_play_by_play(gameIDs[i,"game_id"], gameIDs[i,"type"], gameIDs[i,"season"]))
+ 
+  #Loop for each game id.
+  for(i in 1:nrow(gameIDs)) {
+    #Bind the data scraped so far with the data scraped using the current game id.
+    scrapedGamedPlayByPlay <- rbind(scrapedGamedPlayByPlay, scrape_game_play_by_play(gameIDs[i,"game_id"], gameIDs[i,"type"], gameIDs[i,"season"], 0))
   }
   
   return(scrapedGamedPlayByPlay)
@@ -63,7 +66,8 @@ multi_scrape_game_play_by_play <- function(gameIDs) {
 
 nflscrapR is an R package that is used to "utilize and analyze data from the National Football League (NFL) API". It is necessary to install it in order to scrape data pertaining to NFL box scores. The nflscrapR package can be found at https://github.com/maksimhorowitz/nflscrapR. The devtools package can install R packages hosted on Github.
   
-```{r Installation, message=FALSE}
+```{r Installation of nflscrapR, message=FALSE}
+
 library(devtools)
 
 #Install nflscrapR from Github using devtools.
@@ -75,21 +79,31 @@ devtools::install_github(repo = "maksimhorowitz/nflscrapR")
 
 ```{r Scrape Game IDS, message=FALSE}
 
+#Scrape all regular and post season game ids from 2009 to 2018.
 scrapedGameIDs <- multi_scrape_game_ids(2009:2018, c("reg", "post"))
+
+#Display the first six observations.
 head(scrapedGameIDs)
 
+#Save scraped game ids to file.
 save(scrapedGameIDs, file = "scrapedGameIDs.Rda")
 
 ```
 
 #### Scrape Game Play-by-Play
 
-```{r}
+```{r Scape Game Play-by-Play, message=FALSE}
+
+#Load the scraped game ids data frame from file.
 load("scrapedGameIDs.Rda")
 
+#Scrape play-by-play data of all selected games.
 scrapedGamedPlayByPlay <- multi_scrape_game_play_by_play(scrapedGameIDs)
+
+#Display the first six observations.
 head(scrapedGamedPlayByPlay)
 
+#Save scraped game play-by-play data to file.
 save(scrapedGamedPlayByPlay, file = "scrapedGamePlayByPlay.Rda")
 
 ```
@@ -105,25 +119,12 @@ Horowitz, Marksim. "Introducing the nflscrapR Package." Github, https://github.c
 https://seahawkswire.usatoday.com/2018/12/03/seahawks-continue-bizarre-scorigami-streak-under-pete-carroll/
 
 ```{r Testing}
+table(as.factor(scrapedGameIDs[,"type"]))
+scrapedGameIDs["2009091000","game_id"]
+scrapedGameIDs[1,"type"]
+scrapedGameIDs$game_id
+nrow(scrapedGameIDs)
 
-scrapedGameIDs <- load("scrapedGameIDs.Rda")
-
-prmatrix(matrix(paste(colnames(initialData), ": ", sapply(initialData, class), sep=""), nrow = 7, ncol = 7), rowlab=rep("",7), collab=rep("",7))
-
-x <- scrape_game_play_by_play(2018111900, "reg", 2018, check_url = 1)
-x <- as.data.frame(x)
-
-prmatrix(matrix(paste(colnames(x), ": ", sapply(x, class), sep=""), nrow = 86, ncol = 3), rowlab=rep("",86), collab=rep("",3))
-class(x)
-View(cbind(x[x$quarter_end == 1,]$total_away_score, x[x$quarter_end == 1,]$total_home_score))
-
-class(x)
-unique(x$PlayType)
-View(x[x$PlayType=="Quarter End" | x$PlayType=="End of Game",])
-
-scrapedGameIDs <- scrape_game_play_by_play(scrapedGameIDs[1,"game_id"], scrapedGameIDs[1,"type"], scrapedGameIDs[1,"season"])
-
-scrapedGamedPlayByPlay <- as.data.frame(scrape_game_play_by_play(scrapedGameIDs[1,"game_id"], scrapedGameIDs[1,"type"], scrapedGameIDs[1,"season"])[0,])
-
+x <- scrape_game_play_by_play(scrapedGameIDs[i,"game_id"], scrapedGameIDs[i,"type"], scrapedGameIDs[i,"season"])
 ```
 
