@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE, root.dir = "~/GitHub/ScorigamiMC")
 
 # Introduction
 
-"Scorigami is the art of achieving a final score in an NFL game that has never happened before. It is a term made up by Jon Bois, a concept perfected by Pete Carroll, and a goal that may not be completed before the heat death of the universe."
+Scorigami is the "art of achieving a final score in an NFL game that has never happened before" (Bois). The final score of an NFL game consists of the total points scored by each of the two teams. Scoring in the NFL All NFL scores are made of 5 different methods of scoring points. THe  (Bois, 7:19)
 
 # Literature Review
 
@@ -46,16 +46,21 @@ multi_scrape_game_ids <- function(seasons, types, weeks = NULL, teams = NULL) {
 
 multi_scrape_game_play_by_play <- function(gameIDs) {
   library(nflscrapR)  
-  #Create empty data frame using the first entry of gameIDS to get the correct schema for scraped game play play-by-play. 
-  scrapedGamedPlayByPlay <- as.data.frame(scrape_game_play_by_play(gameIDs[1,"game_id"], gameIDs[1,"type"], gameIDs[1,"season"])[0,])
- 
+  
+  #Create an empty list for each game ids' play-by-play data.
+  scrapedGamePlayByPlayList = list()
+  
   #Loop for each game id.
   for(i in 1:nrow(gameIDs)) {
+    
     #Bind the data scraped so far with the data scraped using the current game id.
-    scrapedGamedPlayByPlay <- rbind(scrapedGamedPlayByPlay, scrape_game_play_by_play(gameIDs[i,"game_id"], gameIDs[i,"type"], gameIDs[i,"season"], 0))
+    scrapedGamePlayByPlayList[[i]] <- scrape_game_play_by_play(gameIDs[i,"game_id"], gameIDs[i,"type"], gameIDs[i,"season"], 0)[x$time=="15:00",c("game_id","home_team","away_team","qtr","total_home_score","total_away_score")]
   }
   
-  return(scrapedGamedPlayByPlay)
+  #
+  scrapedGamePlayByPlay <- do.call(rbind, scrapedGamePlayByPlayList)
+  
+  return(scrapedGamePlayByPlay)
 }
 ```
 
@@ -77,7 +82,7 @@ devtools::install_github(repo = "maksimhorowitz/nflscrapR")
 
 #### Scrape Game IDs
 
-```{r Scrape Game IDS, message=FALSE}
+```{r Scrape Game IDS, message=FALSE, cache=TRUE}
 
 #Scrape all regular and post season game ids from 2009 to 2018.
 scrapedGameIDs <- multi_scrape_game_ids(2009:2018, c("reg", "post"))
@@ -92,7 +97,7 @@ save(scrapedGameIDs, file = "scrapedGameIDs.Rda")
 
 #### Scrape Game Play-by-Play
 
-```{r Scape Game Play-by-Play, message=FALSE}
+```{r Scape Game Play-by-Play, message=FALSE, cache=TRUE }
 
 #Load the scraped game ids data frame from file.
 load("scrapedGameIDs.Rda")
@@ -112,19 +117,14 @@ save(scrapedGamedPlayByPlay, file = "scrapedGamePlayByPlay.Rda")
 
 # Works Cited
 
-https://www.youtube.com/watch?v=9l5C8cGMueY
+Bois, John. "Every NFL Score Ever | Chart Party". *Youtube*, SB Nation, December 7, 2016, https://www.youtube.com/watch?v=9l5C8cGMueY.
 
 Horowitz, Marksim. "Introducing the nflscrapR Package." Github, https://github.com/maksimhorowitz/nflscrapR. Accessesd 15 November 2019.
 
 https://seahawkswire.usatoday.com/2018/12/03/seahawks-continue-bizarre-scorigami-streak-under-pete-carroll/
 
 ```{r Testing}
-table(as.factor(scrapedGameIDs[,"type"]))
-scrapedGameIDs["2009091000","game_id"]
-scrapedGameIDs[1,"type"]
-scrapedGameIDs$game_id
-nrow(scrapedGameIDs)
-
-x <- scrape_game_play_by_play(scrapedGameIDs[i,"game_id"], scrapedGameIDs[i,"type"], scrapedGameIDs[i,"season"])
+x <- scrape_game_play_by_play(scrapedGameIDs[1,"game_id"], scrapedGameIDs[1,"type"], scrapedGameIDs[1,"season"])
+y <- x[x$time=="15:00",c("game_id","home_team","away_team","qtr","total_home_score","total_away_score")]
 ```
 
