@@ -54,7 +54,6 @@ multi_scrape_game_play_by_play <- function(gameIDs) {
   
   #Loop for each game id.
   for(i in 1:nrow(gameIDs)) {
-    print(i)
     #Bind the data scraped so far with the data scraped using the current game id.
     tempScrapedGamePlayByPlay <- scrape_game_play_by_play(gameIDs[i,"game_id"], gameIDs[i,"type"], gameIDs[i,"season"], 0)
     scrapedGamePlayByPlayList[[i]] <- tempScrapedGamePlayByPlay[tempScrapedGamePlayByPlay$quarter_end==1,c("game_id","home_team","away_team","qtr","total_home_score","total_away_score")]
@@ -70,13 +69,43 @@ multi_scrape_game_play_by_play <- function(gameIDs) {
   return(scrapedGamePlayByPlay)
 }
 
-game_data <- function(gameIDS, gamePlayByPlay) {
-  #All game data will have one observation for each game.
+game_data <- function(gameIDs, gamePlayByPlay) {
+
   n <- length(gameIDs$game_id)
-  vector(mode = "character", n)
-  game_id <- gameIDS$game_id
-  home_team <- vector()
   
+  game_id <- gameIDs$game_id
+  home_team <- gameIDs$home_team
+  away_team <- gameIDs$away_team
+  
+  qtr1_home_score <- rep(NA, length=n)
+  qtr1_away_score <- rep(NA, length=n)
+  qtr2_home_score <- rep(NA, length=n)
+  qtr2_away_score <- rep(NA, length=n)
+  qtr3_home_score <- rep(NA, length=n)
+  qtr3_away_score <- rep(NA, length=n)
+  qtr4_home_score <- rep(NA, length=n)
+  qtr4_away_score <- rep(NA, length=n)
+  
+  final_home_score <- gameIDs$home_score 
+  final_away_score <- gameIDs$away_score
+  
+  for(i in 1:length(game_id)){
+    tryCatch({qtr1_home_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==1,][[1,"total_home_score"]]}, error=function(e){})
+    tryCatch({qtr1_away_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==1,][[1,"total_away_score"]]}, error=function(e){})
+    tryCatch({qtr2_home_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==2,][[1,"total_home_score"]]}, error=function(e){})
+    tryCatch({qtr2_away_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==2,][[1,"total_away_score"]]}, error=function(e){})
+    tryCatch({qtr3_home_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==3,][[1,"total_home_score"]]}, error=function(e){})
+    tryCatch({qtr3_away_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==3,][[1,"total_away_score"]]}, error=function(e){})
+    tryCatch({qtr4_home_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==4,][[1,"total_home_score"]]}, error=function(e){})
+    tryCatch({qtr4_away_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==4,][[1,"total_away_score"]]}, error=function(e){})
+  }
+  
+  gameData <- do.call(cbind,list(game_id, home_team, away_team, qtr1_home_score, qtr1_away_score, qtr2_home_score, qtr2_away_score, qtr3_home_score, qtr3_away_score, qtr4_home_score, qtr4_away_score, final_home_score, final_away_score))
+  rownames(gameData) <- 1:n
+  colnames(gameData) <- c("game_id", "home_team", "away_team", "qtr1_home_score", "qtr1_away_score", "qtr2_home_score", "qtr2_away_score", "qtr3_home_score", "qtr3_away_score", "qtr4_home_score", "qtr4_away_score", "final_home_score", "final_away_score")
+  gameData <- as.data.frame(gameData)
+  
+  return(gameData)
 }
 
 ```
@@ -122,9 +151,9 @@ save(scrapedGameIDs, file = "scrapedGameIDs.Rda")
 load("scrapedGameIDs.Rda")
 
 #Scrape play-by-play data of all selected games.
-scrapedGamePlayByPlay <- multi_scrape_game_play_by_play(scrapedGameIDs)
+#scrapedGamePlayByPlay <- multi_scrape_game_play_by_play(scrapedGameIDs)
 
-#load("scrapedGamePlayByPlay.Rda")
+load("scrapedGamePlayByPlay.Rda")
 
 #Display the first six observations.
 head(scrapedGamePlayByPlay)
@@ -142,7 +171,10 @@ save(scrapedGamePlayByPlay, file = "scrapedGamePlayByPlay.Rda")
 load("scrapedGameIDs.Rda")
 load("scrapedGamePlayByPlay.Rda")
 
+gameData <- game_data(scrapedGameIDs, scrapedGamePlayByPlay)
+head(gameData)
 
+save(gameData, file = "gameData.Rda")
 
 
 ```
@@ -160,29 +192,41 @@ https://seahawkswire.usatoday.com/2018/12/03/seahawks-continue-bizarre-scorigami
 
 ```{r Testing}
   gameIDs <- scrapedGameIDs
-  a <- scrape_game_play_by_play(gameIDs[1,"game_id"], gameIDs[1,"type"], gameIDs[1,"season"],0)
-  gameIDs <- scrapedGameIDs
   gamePlayByPlay <- scrapedGamePlayByPlay
   #All game data will have one observation for each game.
   n <- length(gameIDs$game_id)
   
-  game_id <- gameIDS$game_id
+  game_id <- gameIDs$game_id
   home_team <- gameIDs$home_team
   away_team <- gameIDs$away_team
   
-  qtr1_home_score <- vector(mode="numeric", length=n)
-  qtr1_away_score <- vector(mode="numeric", length=n)
-  qtr2_home_score <- vector(mode="numeric", length=n)
-  qtr2_away_score <- vector(mode="numeric", length=n)
-  qtr3_home_score <- vector(mode="numeric", length=n)
-  qtr3_away_score <- vector(mode="numeric", length=n)
-  qtr4_home_score <- vector(mode="numeric", length=n)
-  qtr4_away_score <- vector(mode="numeric", length=n)
+  qtr1_home_score <- rep(NA, length=n)
+  qtr1_away_score <- rep(NA, length=n)
+  qtr2_home_score <- rep(NA, length=n)
+  qtr2_away_score <- rep(NA, length=n)
+  qtr3_home_score <- rep(NA, length=n)
+  qtr3_away_score <- rep(NA, length=n)
+  qtr4_home_score <- rep(NA, length=n)
+  qtr4_away_score <- rep(NA, length=n)
   final_home_score <- gameIDs$home_score 
   final_away_score <- gameIDs$away_score
   
+  for(i in 1:length(game_id)){
+    tryCatch({qtr1_home_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==1,][[1,"total_home_score"]]}, error=function(e){})
+    tryCatch({qtr1_away_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==1,][[1,"total_away_score"]]}, error=function(e){})
+    tryCatch({qtr2_home_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==2,][[1,"total_home_score"]]}, error=function(e){})
+    tryCatch({qtr2_away_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==2,][[1,"total_away_score"]]}, error=function(e){})
+    tryCatch({qtr3_home_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==3,][[1,"total_home_score"]]}, error=function(e){})
+    tryCatch({qtr3_away_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==3,][[1,"total_away_score"]]}, error=function(e){})
+    tryCatch({qtr4_home_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==4,][[1,"total_home_score"]]}, error=function(e){})
+    tryCatch({qtr4_away_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==4,][[1,"total_away_score"]]}, error=function(e){})
+  }
   
-  x <- multi_scrape_game_play_by_play(scrapedGameIDs[1:16,])
+  gameData <- do.call(cbind,list(game_id, home_team, away_team, qtr1_home_score, qtr1_away_score, qtr2_home_score, qtr2_away_score, qtr3_home_score, qtr3_away_score, qtr4_home_score, qtr4_away_score, final_home_score, final_away_score))
+  rownames(gameData) <- 1:n
+  colnames(gameData) <- c("game_id", "home_team", "away_team", "qtr1_home_score", "qtr1_away_score", "qtr2_home_score", "qtr2_away_score", "qtr3_home_score", "qtr3_away_score", "qtr4_home_score", "qtr4_away_score", "final_home_score", "final_away_score")
+  
+  dim(gameData[complete.cases(gameData),])
 
 ```
 
