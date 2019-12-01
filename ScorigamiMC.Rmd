@@ -20,7 +20,9 @@ Scorigami is the "art of achieving a final score in an NFL game that has never h
 
 ### My Library
 
-```{r My Library}
+```{r My Library, message=FALSE}
+
+library(dplyr, nflscrapR)
 
 multi_scrape_game_ids <- function(seasons, types, weeks = NULL, teams = NULL) {
   library(nflscrapR)
@@ -52,16 +54,31 @@ multi_scrape_game_play_by_play <- function(gameIDs) {
   
   #Loop for each game id.
   for(i in 1:nrow(gameIDs)) {
-    
+    print(i)
     #Bind the data scraped so far with the data scraped using the current game id.
-    scrapedGamePlayByPlayList[[i]] <- scrape_game_play_by_play(gameIDs[i,"game_id"], gameIDs[i,"type"], gameIDs[i,"season"], 0)[x$time=="15:00",c("game_id","home_team","away_team","qtr","total_home_score","total_away_score")]
+    tempScrapedGamePlayByPlay <- scrape_game_play_by_play(gameIDs[i,"game_id"], gameIDs[i,"type"], gameIDs[i,"season"], 0)
+    scrapedGamePlayByPlayList[[i]] <- tempScrapedGamePlayByPlay[tempScrapedGamePlayByPlay$quarter_end==1,c("game_id","home_team","away_team","qtr","total_home_score","total_away_score")]
   }
   
   #
   scrapedGamePlayByPlay <- do.call(rbind, scrapedGamePlayByPlayList)
   
+  scrapedGamePlayByPlay <- scrapedGamePlayByPlay[complete.cases(scrapedGamePlayByPlay), ]
+  
+  scrapedGamePlayByPlay <- unique(scrapedGamePlayByPlay)
+
   return(scrapedGamePlayByPlay)
 }
+
+game_data <- function(gameIDS, gamePlayByPlay) {
+  #All game data will have one observation for each game.
+  n <- length(gameIDs$game_id)
+  vector(mode = "character", n)
+  game_id <- gameIDS$game_id
+  home_team <- vector()
+  
+}
+
 ```
 
 
@@ -85,10 +102,12 @@ devtools::install_github(repo = "maksimhorowitz/nflscrapR")
 ```{r Scrape Game IDS, message=FALSE, cache=TRUE}
 
 #Scrape all regular and post season game ids from 2009 to 2018.
-scrapedGameIDs <- multi_scrape_game_ids(2009:2018, c("reg", "post"))
+#scrapedGameIDs <- multi_scrape_game_ids(2009:2018, c("reg", "post"))
+load("scrapedGameIDs.Rda")
+
 
 #Display the first six observations.
-head(scrapedGameIDs)
+head(select(scrapedGameIDs, -c("game_url", "state_of_game")))
 
 #Save scraped game ids to file.
 save(scrapedGameIDs, file = "scrapedGameIDs.Rda")
@@ -97,21 +116,37 @@ save(scrapedGameIDs, file = "scrapedGameIDs.Rda")
 
 #### Scrape Game Play-by-Play
 
-```{r Scape Game Play-by-Play, message=FALSE, cache=TRUE }
+```{r Scape Game Play-by-Play, message=FALSE, cache=TRUE}
 
 #Load the scraped game ids data frame from file.
 load("scrapedGameIDs.Rda")
 
 #Scrape play-by-play data of all selected games.
-scrapedGamedPlayByPlay <- multi_scrape_game_play_by_play(scrapedGameIDs)
+scrapedGamePlayByPlay <- multi_scrape_game_play_by_play(scrapedGameIDs)
+
+#load("scrapedGamePlayByPlay.Rda")
 
 #Display the first six observations.
-head(scrapedGamedPlayByPlay)
+head(scrapedGamePlayByPlay)
 
 #Save scraped game play-by-play data to file.
-save(scrapedGamedPlayByPlay, file = "scrapedGamePlayByPlay.Rda")
+save(scrapedGamePlayByPlay, file = "scrapedGamePlayByPlay.Rda")
 
 ```
+
+#### Combine Data Sets
+
+```{r Combine Data Sets}
+
+#Load both scraped datasets.
+load("scrapedGameIDs.Rda")
+load("scrapedGamePlayByPlay.Rda")
+
+
+
+
+```
+
 
 
 
@@ -124,7 +159,30 @@ Horowitz, Marksim. "Introducing the nflscrapR Package." Github, https://github.c
 https://seahawkswire.usatoday.com/2018/12/03/seahawks-continue-bizarre-scorigami-streak-under-pete-carroll/
 
 ```{r Testing}
-x <- scrape_game_play_by_play(scrapedGameIDs[1,"game_id"], scrapedGameIDs[1,"type"], scrapedGameIDs[1,"season"])
-y <- x[x$time=="15:00",c("game_id","home_team","away_team","qtr","total_home_score","total_away_score")]
+  gameIDs <- scrapedGameIDs
+  a <- scrape_game_play_by_play(gameIDs[1,"game_id"], gameIDs[1,"type"], gameIDs[1,"season"],0)
+  gameIDs <- scrapedGameIDs
+  gamePlayByPlay <- scrapedGamePlayByPlay
+  #All game data will have one observation for each game.
+  n <- length(gameIDs$game_id)
+  
+  game_id <- gameIDS$game_id
+  home_team <- gameIDs$home_team
+  away_team <- gameIDs$away_team
+  
+  qtr1_home_score <- vector(mode="numeric", length=n)
+  qtr1_away_score <- vector(mode="numeric", length=n)
+  qtr2_home_score <- vector(mode="numeric", length=n)
+  qtr2_away_score <- vector(mode="numeric", length=n)
+  qtr3_home_score <- vector(mode="numeric", length=n)
+  qtr3_away_score <- vector(mode="numeric", length=n)
+  qtr4_home_score <- vector(mode="numeric", length=n)
+  qtr4_away_score <- vector(mode="numeric", length=n)
+  final_home_score <- gameIDs$home_score 
+  final_away_score <- gameIDs$away_score
+  
+  
+  x <- multi_scrape_game_play_by_play(scrapedGameIDs[1:16,])
+
 ```
 
