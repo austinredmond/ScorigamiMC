@@ -90,14 +90,14 @@ game_data <- function(gameIDs, gamePlayByPlay) {
   final_away_score <- gameIDs$away_score
   
   for(i in 1:length(game_id)){
-    tryCatch({qtr1_home_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==1,][[1,"total_home_score"]]}, error=function(e){})
-    tryCatch({qtr1_away_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==1,][[1,"total_away_score"]]}, error=function(e){})
-    tryCatch({qtr2_home_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==2,][[1,"total_home_score"]]}, error=function(e){})
-    tryCatch({qtr2_away_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==2,][[1,"total_away_score"]]}, error=function(e){})
-    tryCatch({qtr3_home_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==3,][[1,"total_home_score"]]}, error=function(e){})
-    tryCatch({qtr3_away_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==3,][[1,"total_away_score"]]}, error=function(e){})
-    tryCatch({qtr4_home_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==4,][[1,"total_home_score"]]}, error=function(e){})
-    tryCatch({qtr4_away_score[[i]] <- gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==4,][[1,"total_away_score"]]}, error=function(e){})
+    tryCatch({qtr1_home_score[[i]] <- as.numeric(gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==1,][[1,"total_home_score"]])}, error=function(e){})
+    tryCatch({qtr1_away_score[[i]] <- as.numeric(gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==1,][[1,"total_away_score"]])}, error=function(e){})
+    tryCatch({qtr2_home_score[[i]] <- as.numeric(gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==2,][[1,"total_home_score"]])}, error=function(e){})
+    tryCatch({qtr2_away_score[[i]] <- as.numeric(gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==2,][[1,"total_away_score"]])}, error=function(e){})
+    tryCatch({qtr3_home_score[[i]] <- as.numeric(gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==3,][[1,"total_home_score"]])}, error=function(e){})
+    tryCatch({qtr3_away_score[[i]] <- as.numeric(gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==3,][[1,"total_away_score"]])}, error=function(e){})
+    tryCatch({qtr4_home_score[[i]] <- as.numeric(gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==4,][[1,"total_home_score"]])}, error=function(e){})
+    tryCatch({qtr4_away_score[[i]] <- as.numeric(gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==4,][[1,"total_away_score"]])}, error=function(e){})
   }
   
   gameData <- do.call(cbind,list(game_id, home_team, away_team, qtr1_home_score, qtr1_away_score, qtr2_home_score, qtr2_away_score, qtr3_home_score, qtr3_away_score, qtr4_home_score, qtr4_away_score, final_home_score, final_away_score))
@@ -106,6 +106,12 @@ game_data <- function(gameIDs, gamePlayByPlay) {
   gameData <- as.data.frame(gameData)
   
   return(gameData)
+}
+
+points_scored <- function(gameData){
+  
+  
+  
 }
 
 ```
@@ -178,6 +184,99 @@ save(gameData, file = "gameData.Rda")
 
 
 ```
+
+### Construct the Distribution
+
+```{r}
+
+load("gameData.Rda")
+
+
+
+pointsScored <- matrix(rep(0, 35*35), nrow = 35, ncol=35)
+rownames(pointsScored) <- 0:34
+colnames(pointsScored) <- 0:34
+
+winning_team_scored <- NULL
+losing_team_scored <- NULL
+
+for(i in 1:length(gameData$game_id)){
+  
+  tryCatch({
+    winning_team_scored <- as.character(max(as.numeric(as.character(gameData$qtr1_home_score[i])),as.numeric(as.character(gameData$qtr1_away_score[i]))))
+    losing_team_scored <- as.character(min(as.numeric(as.character(gameData$qtr1_home_score[i])),as.numeric(as.character(gameData$qtr1_away_score[i]))))
+    pointsScored[losing_team_scored,winning_team_scored] <- pointsScored[losing_team_scored,winning_team_scored] + 1
+  }, error=function(e){})
+  
+  tryCatch({
+    if(as.numeric(as.character(gameData$qtr1_home_score[i]))>as.numeric(as.character(gameData$qtr1_away_score[i]))){
+      winning_team_scored <- as.character(as.numeric(as.character(gameData$qtr2_home_score[i])) - as.numeric(as.character(gameData$qtr1_home_score[i])))
+      losing_team_scored <- as.character(as.numeric(as.character(gameData$qtr2_away_score[i])) - as.numeric(as.character(gameData$qtr1_away_score[i])))
+    } else if(as.numeric(as.character(gameData$qtr1_home_score[i]))<as.numeric(as.character(gameData$qtr1_away_score[i]))) {
+      winning_team_scored <- as.character(as.numeric(as.character(gameData$qtr2_away_score[i])) - as.numeric(as.character(gameData$qtr1_away_score[i])))
+      losing_team_scored <- as.character(as.numeric(as.character(gameData$qtr2_home_score[i])) - as.numeric(as.character(gameData$qtr1_home_score[i])))
+    } else {
+      winning_team_scored <- as.character(max(as.numeric(as.character(gameData$qtr2_home_score[i])) - as.numeric(as.character(gameData$qtr1_home_score[i])),
+                                              as.numeric(as.character(gameData$qtr2_away_score[i])) - as.numeric(as.character(gameData$qtr1_away_score[i]))))
+      losing_team_scored <- as.character(min(as.numeric(as.character(gameData$qtr2_home_score[i])) - as.numeric(as.character(gameData$qtr1_home_score[i])),
+                                             as.numeric(as.character(gameData$qtr2_away_score[i])) - as.numeric(as.character(gameData$qtr1_away_score[i]))))
+    }
+    pointsScored[losing_team_scored,winning_team_scored] <- pointsScored[losing_team_scored,winning_team_scored] + 1
+      
+  },error=function(e){})
+  
+  tryCatch({
+    if(as.numeric(as.character(gameData$qtr2_home_score[i]))>as.numeric(as.character(gameData$qtr2_away_score[i]))){
+      winning_team_scored <- as.character(as.numeric(as.character(gameData$qtr3_home_score[i])) - as.numeric(as.character(gameData$qtr2_home_score[i])))
+      losing_team_scored <- as.character(as.numeric(as.character(gameData$qtr3_away_score[i])) - as.numeric(as.character(gameData$qtr2_away_score[i])))
+    } else if(as.numeric(as.character(gameData$qtr2_home_score[i]))<as.numeric(as.character(gameData$qtr2_away_score[i]))) {
+      winning_team_scored <- as.character(as.numeric(as.character(gameData$qtr3_away_score[i])) - as.numeric(as.character(gameData$qtr2_away_score[i])))
+      losing_team_scored <- as.character(as.numeric(as.character(gameData$qtr3_home_score[i])) - as.numeric(as.character(gameData$qtr2_home_score[i])))
+    } else {
+      winning_team_scored <- as.character(max(as.numeric(as.character(gameData$qtr3_home_score[i])) - as.numeric(as.character(gameData$qtr2_home_score[i])),
+                                              as.numeric(as.character(gameData$qtr3_away_score[i])) - as.numeric(as.character(gameData$qtr2_away_score[i]))))
+      losing_team_scored <- as.character(min(as.numeric(as.character(gameData$qtr3_home_score[i])) - as.numeric(as.character(gameData$qtr2_home_score[i])),
+                                             as.numeric(as.character(gameData$qtr3_away_score[i])) - as.numeric(as.character(gameData$qtr2_away_score[i]))))
+    }
+    pointsScored[losing_team_scored,winning_team_scored] <- pointsScored[losing_team_scored,winning_team_scored] + 1
+      
+  },error=function(e){})
+  
+  tryCatch({
+    if(as.numeric(as.character(gameData$qtr3_home_score[i]))>as.numeric(as.character(gameData$qtr3_away_score[i]))){
+      winning_team_scored <- as.character(as.numeric(as.character(gameData$qtr4_home_score[i])) - as.numeric(as.character(gameData$qtr3_home_score[i])))
+      losing_team_scored <- as.character(as.numeric(as.character(gameData$qtr4_away_score[i])) - as.numeric(as.character(gameData$qtr3_away_score[i])))
+    } else if(as.numeric(as.character(gameData$qtr3_home_score[i]))<as.numeric(as.character(gameData$qtr3_away_score[i]))) {
+      winning_team_scored <- as.character(as.numeric(as.character(gameData$qtr4_away_score[i])) - as.numeric(as.character(gameData$qtr3_away_score[i])))
+      losing_team_scored <- as.character(as.numeric(as.character(gameData$qtr4_home_score[i])) - as.numeric(as.character(gameData$qtr3_home_score[i])))
+    } else {
+      winning_team_scored <- as.character(max(as.numeric(as.character(gameData$qtr4_home_score[i])) - as.numeric(as.character(gameData$qtr3_home_score[i])),
+                                              as.numeric(as.character(gameData$qtr4_away_score[i])) - as.numeric(as.character(gameData$qtr3_away_score[i]))))
+      losing_team_scored <- as.character(min(as.numeric(as.character(gameData$qtr4_home_score[i])) - as.numeric(as.character(gameData$qtr3_home_score[i])),
+                                             as.numeric(as.character(gameData$qtr4_away_score[i])) - as.numeric(as.character(gameData$qtr3_away_score[i]))))
+    }
+    pointsScored[losing_team_scored,winning_team_scored] <- pointsScored[losing_team_scored,winning_team_scored] + 1
+      
+  },error=function(e){})
+}
+
+View(as.table(pointsScored))
+pointsScored2 <- pointsScored
+pointsScored2[pointsScored2==0] <- NA
+
+plot(pointsScored2, breaks=c(0,1,2,3,5,9,14,50,100,150,1000),col = magma)
+
+x <- vector(mode="numeric", length = 722)
+for(i in 0:722) {
+  x[i] <- sum(pointsScored>i)
+}
+sum(pointsScored>14)
+sum(pointsScored<=14)
+plot(x)
+View(x)
+
+```
+
 
 
 
