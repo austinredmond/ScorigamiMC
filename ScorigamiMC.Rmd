@@ -12,9 +12,11 @@ knitr::opts_chunk$set(echo = TRUE, root.dir = "~/GitHub/ScorigamiMC")
 
 # Introduction
 
+#### Project Description and Objectives 
+
 Scorigami is the "art of achieving a final score in an NFL game that has never happened before" (Bois). The final score of an NFL game consists of the total points scored by each of the two teams. Scoring in the NFL All NFL scores are made of 5 different methods of scoring points. THe  (Bois, 7:19)
 
-# Literature Review
+#### Literature Review
 
 # Methodology
 
@@ -110,9 +112,9 @@ game_data <- function(gameIDs, gamePlayByPlay) {
 
 points_scored_frequency <- function(gameData){
   
-  pointsScoredFrequency <- matrix(rep(0, 35*35), nrow = 35, ncol=35)
-  rownames(pointsScoredFrequency) <- 0:34
-  colnames(pointsScoredFrequency) <- 0:34
+  pointsScoredFrequency <- matrix(rep(0, 32*32), nrow = 32, ncol=32)
+  rownames(pointsScoredFrequency) <- 0:31
+  colnames(pointsScoredFrequency) <- 0:31
   
   winning_team_scored <- NULL
   losing_team_scored <- NULL
@@ -185,8 +187,8 @@ points_scored_observations <- function(pointsScoredFrequency) {
   
   pointsScoredObservations <- list()
 
-  for(c in as.character(0:34)) {
-    for(r in as.character(0:34)) {
+  for(c in as.character(0:31)) {
+    for(r in as.character(0:31)) {
       n <- pointsScoredFrequency[r,c]
       temp <- list()
       tryCatch({
@@ -202,7 +204,17 @@ points_scored_observations <- function(pointsScoredFrequency) {
   pointsScoredObservations <- do.call(rbind, pointsScoredObservations)
   colnames(pointsScoredObservations) <- c("losing_team_points_scored","winning_team_points_scored")
   
+  pointsScoredObservations <- as.data.frame(pointsScoredObservations)
+  
   return(pointsScoredObservations)
+}
+
+combined_frequency <- function(pointsScoredObservations) {
+  x <- c(pointsScoredObservations$losing_team_points_scored, pointsScoredObservations$winning_team_points_scored)
+  combined_frequency <- vector(mode="numeric", length = length())
+  for(i in 1:length(x)) {
+    
+  }
 }
 
 ```
@@ -276,28 +288,80 @@ save(gameData, file = "gameData.Rda")
 
 ```
 
-### Construct the Distribution
+### The Markov Chain Representation
 
-```{r}
-library(viridis)
+#### Get Transition Data (Points Scored by Each Team for Each Quarter)
 
+```{r, Construct the Distribution, error=FALSE}
 load("gameData.Rda")
 
 pointsScoredFrequency <- points_scored_frequency(gameData)
 
 save(pointsScoredFrequency, file="pointsScoredFrequency.Rda")
  
+pointsScoredObservations <- points_scored_observations(pointsScoredFrequency)
+
+save(pointsScoredObservations, file="pointsScoredObservations.Rda")
+
+library(plot.matrix, viridis)
+
 x <- pointsScoredFrequency
 x[x==0] <- NA
 plot(x, breaks=c(0,1,2,3,5,9,14,50,100,150,1000),col = magma, main="Points Scored Frequency Matrix", xlab = "Winning Team Points Scored in One Quarter", ylab = "Losing Team Points Scored in One Quarter")
 
-pointsScoredObservations <- points_scored_observations(pointsScoredFrequency)
+library(ggplot2)
+
+ggplot() + 
+  geom_histogram(aes(x = pointsScoredObservations$losing_team_points_scored, fill = "r"), alpha = 0.3, bins = 31) +
+  geom_histogram(aes(x = pointsScoredObservations$winning_team_points_scored, fill = "b"), alpha = 0.3, bins = 31) +
+  scale_colour_manual(name ="Histograms of Points Scored", values = c("r" = "red", "b" = "blue"), labels=c("b" = "Winning Team", "r" = "Losing Team")) +
+  scale_fill_manual(name ="Legend", values = c("r" = "red", "b" = "blue"), labels=c("b" = "Winning Team", "r" = "Winning"))+
+  labs(title = "Histograms of Points Scored", x = "Points Scored", y = "Frequency")
+
+ks.test(pointsScoredObservations$losing_team_points_scored, pointsScoredObservations$winning_team_points_scored)
+
+pointsScoredRelativeFrequency <- pointsScoredFrequency / sum(pointsScoredFrequency)
+
+winningTeamPointsScoredRelativeFrequency <- colSums(pointsScoredFrequency) / sum(pointsScoredFrequency)
+
+losingTeamPointsSCoredRelativeFrequency <- rowSums(pointsScoredFrequency) / sum(pointsScoredFrequency)
+
+combined_frequency(pointsScoredObservations)
+x <- table(c(pointsScoredObservations$losing_team_points_scored, pointsScoredObservations$winning_team_points_scored))
+View(x)
+```
+
+#### Possible States
+
+```{r Possible States}
+
+load("pointsScoredObservations.Rda")
+
+states <- c("0-0")
+
+for(w in 1:(max(pointsScoredObservations$winning_team_points_scored) * 4)) {
+  for(l in 0:(w - 1)) {
+    states[[length(states)+1]] <- paste(w,l, sep ="-")
+  }
+}
+
+print(states)
+
+states <- states[(states != "1-0") & (states != "1-1") & (states != "2-1") & (states != "3-1") & (states != "4-1") & (states != "5-1") & (states != "7-1")]
+
+length(states)
+
+print(states)
+
+```
+
+#### Transiton Matrix
+
+```{r}
 
 
 
 ```
-
-
 
 
 
