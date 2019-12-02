@@ -209,12 +209,20 @@ points_scored_observations <- function(pointsScoredFrequency) {
   return(pointsScoredObservations)
 }
 
-combined_frequency <- function(pointsScoredObservations) {
-  x <- c(pointsScoredObservations$losing_team_points_scored, pointsScoredObservations$winning_team_points_scored)
-  combined_frequency <- vector(mode="numeric", length = length())
-  for(i in 1:length(x)) {
-    
+combined_points_scored_frequency <- function(pointsScoredObservations) {
+  
+  combinedPointsScoredObservations <- c(pointsScoredObservations$losing_team_points_scored, pointsScoredObservations$winning_team_points_scored)
+  #combinedFrequency <- vector(mode="numeric", length = max(combinedPointsScoredObservations) + 1)
+  combinedFrequency <- matrix(rep(0, 32), nrow = 32, ncol=1)
+  
+  for(i in 1:length(combinedPointsScoredObservations)) {
+    combinedFrequency[[combinedPointsScoredObservations[i]+1]] <- combinedFrequency[[combinedPointsScoredObservations[i]+1]] + 1
   }
+  
+  rownames(combinedFrequency) <- as.character(0:max(combinedPointsScoredObservations))
+  colnames(combinedFrequency) <- c("combined_team_points_scored")
+  
+  return(combinedFrequency)
 }
 
 ```
@@ -320,15 +328,21 @@ ggplot() +
 
 ks.test(pointsScoredObservations$losing_team_points_scored, pointsScoredObservations$winning_team_points_scored)
 
+combinedPointsScoredFrequency <- combined_points_scored_frequency(pointsScoredObservations)
+
+ggplot()+
+  geom_histogram(aes(x=c(pointsScoredObservations$losing_team_points_scored, pointsScoredObservations$winning_team_points_scored)), bins = 31)+
+  labs(title = "Histogram of Points Scored by All Teams", x = "Points Scored", y = "Frequency")
+
 pointsScoredRelativeFrequency <- pointsScoredFrequency / sum(pointsScoredFrequency)
 
 winningTeamPointsScoredRelativeFrequency <- colSums(pointsScoredFrequency) / sum(pointsScoredFrequency)
 
 losingTeamPointsSCoredRelativeFrequency <- rowSums(pointsScoredFrequency) / sum(pointsScoredFrequency)
 
-combined_frequency(pointsScoredObservations)
-x <- table(c(pointsScoredObservations$losing_team_points_scored, pointsScoredObservations$winning_team_points_scored))
-View(x)
+combinedPointsScoredRelativeFrequency <- combinedPointsScoredFrequency / sum(pointsScoredFrequency)
+
+
 ```
 
 #### Possible States
@@ -345,13 +359,11 @@ for(w in 1:(max(pointsScoredObservations$winning_team_points_scored) * 4)) {
   }
 }
 
-print(states)
-
 states <- states[(states != "1-0") & (states != "1-1") & (states != "2-1") & (states != "3-1") & (states != "4-1") & (states != "5-1") & (states != "7-1")]
 
 length(states)
 
-print(states)
+View(states)
 
 ```
 
