@@ -324,7 +324,7 @@ ggplot() +
   geom_histogram(aes(x = pointsScoredObservations$winning_team_points_scored, fill = "b"), alpha = 0.3, bins = 31) +
   scale_colour_manual(name ="Histograms of Points Scored", values = c("r" = "red", "b" = "blue"), labels=c("b" = "Winning Team", "r" = "Losing Team")) +
   scale_fill_manual(name ="Legend", values = c("r" = "red", "b" = "blue"), labels=c("b" = "Winning Team", "r" = "Winning"))+
-  labs(title = "Histograms of Points Scored", x = "Points Scored", y = "Frequency")
+  labs(title = "Histograms of Points Scored", x = "Points Scored in One Quarter", y = "Frequency")
 
 ks.test(pointsScoredObservations$losing_team_points_scored, pointsScoredObservations$winning_team_points_scored)
 
@@ -332,15 +332,19 @@ combinedPointsScoredFrequency <- combined_points_scored_frequency(pointsScoredOb
 
 ggplot()+
   geom_histogram(aes(x=c(pointsScoredObservations$losing_team_points_scored, pointsScoredObservations$winning_team_points_scored)), bins = 31)+
-  labs(title = "Histogram of Points Scored by All Teams", x = "Points Scored", y = "Frequency")
+  labs(title = "Histogram of Points Scored by All Teams", x = "Points Scored in One Quarter", y = "Frequency")
 
 pointsScoredRelativeFrequency <- pointsScoredFrequency / sum(pointsScoredFrequency)
+save(pointsScoredRelativeFrequency, file="pointsScoredRelativeFrequency.Rda")
 
 winningTeamPointsScoredRelativeFrequency <- colSums(pointsScoredFrequency) / sum(pointsScoredFrequency)
+save(winningTeamPointsScoredRelativeFrequency, file="winningTeamPointsScoredRelativeFrequency.Rda")
 
 losingTeamPointsSCoredRelativeFrequency <- rowSums(pointsScoredFrequency) / sum(pointsScoredFrequency)
+save(losingTeamPointsSCoredRelativeFrequency, file="losingTeamPointsSCoredRelativeFrequency.Rda")
 
 combinedPointsScoredRelativeFrequency <- combinedPointsScoredFrequency / sum(pointsScoredFrequency)
+save(combinedPointsScoredRelativeFrequency, file="combinedPointsScoredRelativeFrequency.Rda")
 
 
 ```
@@ -369,9 +373,15 @@ View(states)
 
 #### Transiton Matrix
 
-```{r}
+```{r Transition Matrix}
 
+load("pointsScoredRelativeFrequency.Rda")
 
+load("winningTeamPointsScoredRelativeFrequency.Rda")
+
+load("losingTeamPointsSCoredRelativeFrequency.Rda")
+
+load("combinedPointsScoredRelativeFrequency.Rda")
 
 ```
 
