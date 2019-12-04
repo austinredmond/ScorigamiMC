@@ -259,6 +259,8 @@ The custom made function multi_scrape_game_ids uses the scrape_game_ids function
 #scrapedGameIDs <- multi_scrape_game_ids(2009:2018, c("reg", "post"))
 load("scrapedGameIDs.Rda")
 
+library(dplyr)
+
 #Display the first six observations.
 head(select(scrapedGameIDs, -c("game_url", "state_of_game")))
 
@@ -331,7 +333,8 @@ pointsScoredObservations <- points_scored_observations(pointsScoredFrequency)
 save(pointsScoredObservations, file="pointsScoredObservations.Rda")
 
 #Load the plot.matrix and viridis libraries to create a diagram of the points scored frequency matrix.
-library(plot.matrix, viridis)
+library(plot.matrix)
+library(viridis)
 
 #Plot the points scored frequency matrix,
 x <- pointsScoredFrequency
@@ -385,8 +388,6 @@ for(w in 1:(max(pointsScoredObservations$winning_team_points_scored) * 4)) {
 }
 
 #states <- states[(states != "1-0") & (states != "1-1") & (states != "2-1") & (states != "3-1") & (states != "4-1") & (states != "5-1") & (states != "7-1")]
-
-length(states)
 
 save(states, file="states.Rda")
 
@@ -524,16 +525,21 @@ load("transitionMatrixTwo.Rda")
 ```{r}
 
 load("transitionMatrixOne.Rda")
-
 load("transitionMatrixTwo.Rda")
 
 load("standardOriginVector.Rda")
 
-library(expm)
+library(gpuR)
 
-gameStateProbabilityDistribution <- t(transitionMatrixOne%^%4%*%standardOriginVector)
+gpuTransitionMatrixOne <- gpuMatrix(transitionMatrixOne, type="double")
+gpuStandardOriginVector <- gpuMatrix(standardOriginVector, type = "double")
 
-load()
+stateProbabilityDistribution <- t(gpuTransitionMatrixOne %*% gpuTransitionMatrixOne %*% gpuTransitionMatrixOne %*% gpuTransitionMatrixOne %*% gpuStandardOriginVector)
+
+
+
+#stateProbabilityDistribution <- t(transitionMatrixOne%^%4%*%standardOriginVector)
+
   
 ```
 
