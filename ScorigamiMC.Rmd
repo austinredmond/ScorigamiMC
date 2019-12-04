@@ -17,15 +17,17 @@ knitr::opts_chunk$set(echo = TRUE, root.dir = "~/GitHub/ScorigamiMC")
 
 #### Project Description and Objectives 
 
-  Scorigami is the "art of achieving a final score in an NFL game that has never happened before" (Bois). John Bois, an editor and sportswriter at SB Nation (Colon), invented the term Scorigami in December of 2016. The final score of an NFL game consists of the total points scored by each of the two teams. There are six ways to score points in an NFL game. The two most common ways to score are the 3-point field goal and 7-point touchdown with a successful point-after-attempt. The next three less common ways of scoring are the: 2-point safety; 6-point touchdown with a failed conversion; and the 8-point touchdown with a successful 2-point conversion. The final and nearly impossible way to score is the 1-point safety. The 1-point safety has never occurred in the NFL but it is technically possible as "a team making an extra-point attempt [could] botch the play so badly, they would end up in their own endzone, 98-yards away, and then get tackled in the endzone" (Nogle). The irregular distribution of scoring methods and the relatively smaller sample size from a limited number of games per season means that many final NFL scores that are possible have never actually happened The website https://nflscorigami.com/ has a detailed representation of each final score that has and has not occurred. The topic of this project is related to using Markov Chains to project the probability of a unique final NFL score (otherwise known as a Scorigami) happening given parameters related to the the current score and how many quarters are yet to occur in the game. 
+  Scorigami is the "art of achieving a final score in an NFL game that has never happened before" (Bois). John Bois, an editor and sportswriter at SB Nation (Colon), invented the term Scorigami in December of 2016. The final score of an NFL game consists of the total points scored by each of the two teams. There are six ways to score points in an NFL game. The two most common ways to score are the 3-point field goal and 7-point touchdown with a successful point-after-attempt. The next three less common ways of scoring are the: 2-point safety; 6-point touchdown with a failed conversion; and the 8-point touchdown with a successful 2-point conversion. The final and nearly impossible way to score is the 1-point safety. The 1-point safety has never occurred in the NFL but it is technically possible as "a team making an extra-point attempt [could] botch the play so badly, they would end up in their own endzone, 98-yards away, and then get tackled in the endzone" (Nogle). The irregular distribution of scoring methods and the relatively smaller sample size from a limited number of exactly 256 regular season and 12 postseason games per year means that many final NFL scores that are possible have never actually happened. The website https://nflscorigami.com/ has a detailed representation of each final score that has and has not occurred. The topic of this project is related to using Markov Chains to project the probability of a unique final NFL score (otherwise known as a Scorigami) happening given parameters related to the the current score and how many quarters are yet to occur in the game. 
   
-  For this project each score, where one team is defined as the winning team and the other is defined as the losing team, is considered a state in the Markov Chain. The team that is winning may change from quarter-to-quarter. In the data set, it is found that the largest amount of points scored in a single quarter by a team is 31 points. Using this information as a guideline, the upper bound of states will be a final score of 124-124. The score of 124-124 is based off both teams scoring 31 points per quarter for all four quarters. The scenario described is very extreme compared to actual events where: the highest number of points scored in one game by one team is 73 and the highest number of combined points scored by two teams is 105 points (NFL Scorigami). States are recorded at the start of the game (where the score is always equal to 0-0) and at the end of every quarter. Completing a quarter of play will be considered one transition. Meaning each NFL game will have exactly four transitions. Overtime will not be considered. If teams are tied at the end of regulation, then the score will be considered final. It can be assumed that the first, second, third, and fourth quarter have the same or least similar scoring distributions. However, it is clear that overtime, which has a limited number of scoring scenarios, has a scoring distribution that is very different from the other quarters. 
+  For this analysis each score, where one team is defined as the winning team and the other is defined as the losing team, is considered a state in the Markov Chain. The team that is winning may change from quarter-to-quarter. In the data set, it is found that the largest amount of points scored in a single quarter by a team is 31 points. Using this information as a guideline, the upper bound of states will be a final score of 124-124. The score of 124-124 is based off both teams scoring 31 points per quarter for all four quarters. The scenario described is very extreme compared to actual events where: the highest number of points scored in one game by one team is 73 and the highest number of combined points scored by two teams is 105 points (NFL Scorigami). States are recorded at the start of the game (where the score is always equal to 0-0) and at the end of every quarter. Completing a quarter of play will be considered one transition. Meaning each NFL game will have exactly four transitions. Overtime will not be considered. If teams are tied at the end of regulation, then the score will be considered final. It can be assumed that the first, second, third, and fourth quarter have the same or least similar scoring distributions. However, it is clear that overtime, which has a limited number of scoring scenarios, has a scoring distribution that is very different from the other quarters. 
   
 #### Literature Review
 
 # Methodology
 
 ### My Library
+
+My library consists of functions a quick
 
 ```{r My Library, message=FALSE}
 
@@ -230,6 +232,10 @@ combined_points_scored_frequency <- function(pointsScoredObservations) {
   return(combinedFrequency)
 }
 
+state_probability_distribution <- function(originVector, transitionMatrix, quartersRemaining) {
+  library(expm)
+  return(t(transitionMatrix%^%quartersRemaining)%*%originVector)
+}
 ```
 
 
@@ -237,7 +243,7 @@ combined_points_scored_frequency <- function(pointsScoredObservations) {
 
 #### Install nflscrapR
 
-nflscrapR is an R package that is used to "utilize and analyze data from the National Football League (NFL) API". It is necessary to install it in order to scrape data pertaining to NFL box scores. The nflscrapR package can be found at https://github.com/maksimhorowitz/nflscrapR. The devtools package can install R packages hosted on Github.
+  The data for this analysis was collected using nflscrapR which is an R package that is used to "utilize and analyze data from the National Football League (NFL) API" (How). It is necessary to install it in order to scrape data pertaining to NFL box scores. The nflscrapR package can be found at https://github.com/maksimhorowitz/nflscrapR. The devtools package can install R packages hosted on Github.
   
 ```{r Installation of nflscrapR, message=FALSE}
 
@@ -249,29 +255,29 @@ devtools::install_github(repo = "maksimhorowitz/nflscrapR")
 
 ```
 
-#### Scrape Game IDs
+#### Scrape Individual Games
 
-The custom made function multi_scrape_game_ids uses the scrape_game_ids function from the nflScrapR package to combine multiple queries together. Ten years worth of regular and post season games between 2009 and 2018 are collected for analysis. Given the limited speed of nflScrapR, the best practice would be to scrape the data once and save the data for future use.
+  Ten years worth of regular and post season games between 2009 and 2018 are collected for analysis. During this period, 2560 regular season games and 120 postseason games were played in the NFL. Each observation represents a unique game. Each game has 10 variables that record: a unique game ID; the game's type which indicates whether the game is a regular season or postseason game; the home team; the away team; the week of the season that the game was played; the score of the home team at the end of the game; the score of the away team at the end of the game; a unique url associated with the game; and the status of the game indicating whether the game is finished or ongoing.
 
-```{r Scrape Game IDS, message=FALSE, cache=TRUE}
+```{r Scrape  Individual Games, message=FALSE, cache=TRUE}
 
 #Scrape all regular and post season game ids from 2009 to 2018.
-#scrapedGameIDs <- multi_scrape_game_ids(2009:2018, c("reg", "post"))
+#scrapedGameIDs <- multi_scrape_game_ids(2009:2018, c("reg", "post")) #This is the original line.
 load("scrapedGameIDs.Rda")
-
-library(dplyr)
-
-#Display the first six observations.
-head(select(scrapedGameIDs, -c("game_url", "state_of_game")))
 
 #Save scraped game ids to file.
 save(scrapedGameIDs, file = "scrapedGameIDs.Rda")
 
+#dplyr is used to select or deselect certain variables for in a data set. 
+library(dplyr)
+
+#Display the first six observations.
+head(select(scrapedGameIDs, -c("game_url", "state_of_game")))
 ```
 
 #### Scrape Game Play-by-Play
 
-Another custom made function multi_scrape_game_play_by_play is used to combine multiple queries together. All game IDs collected in the previous section are used to get play-by-play data. In order to manage size limitations, only data related to the score, the quarter, and the identity of the teams was recorded. Any plays that did not coincide with the end of a quarter was discarded. 
+  All previously scraped game IDs collected from 2009 to 2018 are used to get play-by-play data. Each observation represents a unique play. The only variables collected from the play-by-play were; the unique game id; the home team, the away team; the quarter the play happened; the home score; and the away score. All other variables were discarded. For this analysis, it is necessary to record the scores at the end of each of the 4 quarters because that is considered a state. All observations that are not indicated as resulting in the quarter ending are also discarded. This action is executed by conditioning the data on a variable that indicates whether the quarter ends immediately after the play occurs.
 
 ```{r Scape Game Play-by-Play, message=FALSE, cache=TRUE}
 
@@ -280,20 +286,18 @@ load("scrapedGameIDs.Rda")
 
 #Scrape play-by-play data of all selected games.
 #scrapedGamePlayByPlay <- multi_scrape_game_play_by_play(scrapedGameIDs)
-
 load("scrapedGamePlayByPlay.Rda")
-
-#Display the first six observations.
-head(scrapedGamePlayByPlay)
 
 #Save scraped game play-by-play data to file.
 save(scrapedGamePlayByPlay, file = "scrapedGamePlayByPlay.Rda")
 
+#Display the first six observations.
+head(scrapedGamePlayByPlay)
 ```
 
 #### Combine Data Sets
 
-Combine the two scraped data sets into one merged game data set using the game_data function. Each observation in the new data data set will represent one game. The observation will have detailed information about the home and away team score at the end of each quarter. Unfortunately due to limitations in how the data is recorded by the NFL, some games will be missing the score in certain quarters which can be seen when looking at the head of the data.
+  The two data sets are merged together so that each observation in the merged data set will represent one game. The structure of the merged data set is the same as the scraped individual game data set. The score at the end of each quarter, which is information found in the play-by-play data set, is added to each observation in the merged data set.
 
 ```{r Combine Data Sets}
 
@@ -303,20 +307,30 @@ load("scrapedGamePlayByPlay.Rda")
 
 #Merge the scaped game Id dataset and the scraped game play-by-play data set.
 gameData <- game_data(scrapedGameIDs, scrapedGamePlayByPlay)
-head(gameData)
 
 #Save merged game data to file.
 save(gameData, file = "gameData.Rda")
+```
 
+  The first six observations demonstrate the limitations of how the data was originally recorded. Some plays that were the last play of the quarter were not properly recorded as such. When this error in the NFL's records occurs, an NA will be recorded in the data set. It is not ideal to have missing data. However it is possible to proceed to the construction of the points scored distributions. If the score is missing at the end of one quarter for any game, there is still 2 or 3 quarters where the amount of points scored is known. That information can still be used to construct the points scored distributions.
 
+```{r Comment Head of Game Data}
+
+#Load the merged data set.
+load("gameData.Rda")
+
+#Display the first six observations.
+head(gameData)
 ```
 
 ### The Markov Chain Representation
 
-#### Get Transition Data (Points Scored by Each Team for Each Quarter)
+#### The Points Scored Distributions
 
-```{r, Construct the Distribution, error=FALSE}
-
+  The first step in constructing the transition matrices is to determine the distribution of points scored by a team in a quarter. The winning team in a given quarter is defined as the team that is winning the game at the start of the quarter. While the losing team in a given quarter is defined as the team that is losing the game at the start of the quarter. If the teams are tied at the start of the quarter, then the team that scored more points in that quarter is considered the winning team. The winning team and losing team can change from quarter-to-quarter. 
+  The graph below plots the points scored by the winning team and the losing team in one quarter for every quarter recorded in the data set. A single observation includes the points scored from both teams. The x-axis shows the quantity of points scored by the winning team in one quarter. The winning team has scored anywhere from 0 to 31 points. The x-axis shows the quantity of points scored by the losing team in one quarter. The losing team has scored anywhere from 0 to 28 points. 
+  The color of each cell in the grid represents the amount of observations where the winning team and the losing team specifically scored that many points in a quarter. This means that we are treating the scores of the winning team and losing team as dependent. There are 10 colors representing ten bins. The first bin has a black color and each bin thereafter is a lighter color. The tenth bin therefore is yellow. Any cell that is white has no observations. The size of the bins were determined so that they contain roughly the same number of observations. They are as follows: bin 1 (1 observation),  bin 2 (2 observations),  bin 3 (3 observations),  bin 4 (4-5 observations),  bin 5 (6-9 observations),  bin 6 (10-14 observations),  bin 7 (14-50 observations),  bin 8 (51-100 observations),  bin 9 (101-150 observations), and  bin 10 (151 observations or greater).
+```{r Points Scored Frequency Matrix, error= FALSE, message = FALSE}
 #Load the game data.
 load("gameData.Rda")
 
@@ -326,12 +340,6 @@ pointsScoredFrequency <- points_scored_frequency(gameData)
 #Save the points scored frequency matrix to file.
 save(pointsScoredFrequency, file="pointsScoredFrequency.Rda")
 
-#Get the individual observations from the points scored frequency mattrix.
-pointsScoredObservations <- points_scored_observations(pointsScoredFrequency)
-
-#Save the individual points scored matrix to file.
-save(pointsScoredObservations, file="pointsScoredObservations.Rda")
-
 #Load the plot.matrix and viridis libraries to create a diagram of the points scored frequency matrix.
 library(plot.matrix)
 library(viridis)
@@ -340,6 +348,20 @@ library(viridis)
 x <- pointsScoredFrequency
 x[x==0] <- NA
 plot(x, breaks=c(0,1,2,3,5,9,14,50,100,150,1000),col = magma, main="Points Scored Frequency Matrix", xlab = "Winning Team Points Scored in One Quarter", ylab = "Losing Team Points Scored in One Quarter")
+```
+  When observing the graph, it is clear that many combinations of scores have not occurred in period of 2009 to 2018. Given the yellow cells, it is evident that the most common combinations of scores are those where both teams have a score that is a linear transformation of [3x+7y] where x and y are 0, 1, or 2. This result is intuitive given that: first the 3-point field goal and the 7-point touchdown with successful point-after attempt are the most common ways to score and second it is difficult to score on 3 or more drives in a quarter as each quarter is time constrained to 15 minutes of game time. Scores that are only possible using at least one 2-point safety and/or 8-point touchdown are very unlikely to occur. A few examples of unlikely amounts of points scored in a quarter are 2, 4, 5, 8, 11, and 15 to name a few. Columns or rows featuring a rare score like those mentioned are likely to be mostly white, black, or darker shades of purple.
+  The amount of points scored by the winning and losing teams may or may not be independent. Only one team can have possession of the ball at any given point in time. It would be expected that a higher score by one team means that the other team has less position time. However, it is difficult to claim that the chance of scoring a rare score in a quarter is more or less likely based on the other team also scoring a rare score. The graph above shows many combinations of scores as impossible (the cell is white) when they are merely improbable. The sample of only includes 6691 different quarters. Given a larger sameple size it is possible for more combinations to occur. Given this it is appropriate to build two different transition matrices based on two different assumptions.
+  Assumption #1: The points scored by each team is dependent. We should consider the points scored in the same quarter of the same game as dependent on each other.
+  Assumption #2: The points scored by each team is independent. We should consider distribution of points scored by the winning team and the losing team as two different distributions that exist separately.
+
+```{r Get Points Scored Distributions, error=FALSE}
+
+#Get the individual observations from the points scored frequency mattrix.
+pointsScoredObservations <- points_scored_observations(pointsScoredFrequency)
+load("pointsScoredObservations.Rda")
+
+po#Save the individual points scored matrix to file.
+save(pointsScoredObservations, file="pointsScoredObservations.Rda")
 
 library(ggplot2)
 
@@ -412,7 +434,21 @@ additionalScorigamiStates <- setdiff(additionalScorigamiStates, c("70-70", "70-2
 
 scorigamiStates <- c(scorigamiStates, additionalScorigamiStates)
 
+ties <- c()
+
+for(t in 0:124) {
+  ties[[length(ties)+1]] <- paste(t,t,sep = "-")
+}
+
+tiedScorigamiStates <- intersect(scorigamiStates, ties)
+nonTieScorigamiStates <- setdiff(scorigamiStates, tiedScorigamiStates)
+
+
 save(scorigamiStates, file="scorigamiStates.Rda")
+
+load("scorigamiStates.Rda")
+
+
 
 ```
 
@@ -524,23 +560,56 @@ load("transitionMatrixTwo.Rda")
 
 ```{r}
 
-load("transitionMatrixOne.Rda")
-load("transitionMatrixTwo.Rda")
-
+#Load the standard origin Matrix which designates that every game begins with a score of "0-0" with 100% probability.
 load("standardOriginVector.Rda")
 
-library(gpuR)
+load("transitionMatrixOne.Rda")
+stateProbabilityDistributionOne <- state_probability_distribution(standardOriginVector, transitionMatrixOne, 4)
+save(stateProbabilityDistributionOne, file = "stateProbabilityDistributionOne.Rda")
 
-gpuTransitionMatrixOne <- gpuMatrix(transitionMatrixOne, type="double")
-gpuStandardOriginVector <- gpuMatrix(standardOriginVector, type = "double")
+load("transitionMatrixTwo.Rda")
+stateProbabilityDistributionTwo <- state_probability_distribution(standardOriginVector, transitionMatrixTwo, 4)
+save(stateProbabilityDistributionTwo, file = "stateProbabilityDistributionTwo.Rda")
 
-stateProbabilityDistribution <- t(gpuTransitionMatrixOne %*% gpuTransitionMatrixOne %*% gpuTransitionMatrixOne %*% gpuTransitionMatrixOne %*% gpuStandardOriginVector)
+x <- stateProbabilityDistributionOne[is.element(rownames(stateProbabilityDistributionOne), scorigamiStates)]
+x <- matrix(x, ncol = 1, nrow = length(x))
+rownames(x) <- scorigamiStates
+sum(x)
 
+y <- stateProbabilityDistributionTwo[is.element(rownames(stateProbabilityDistributionTwo), scorigamiStates)]
+y <- matrix(y, ncol = 1, nrow = length(y))
+rownames(y) <- scorigamiStates
+sum(y)
 
+scenarioOneOriginVector <- standardOriginVector
+scenarioOneOriginVector["0-0",] <- 0
+scenarioOneOriginVector["2-2",] <- 1
+stateProbabilityDistributionScenarioOne <- state_probability_distribution(scenarioOneOriginVector, transitionMatrixOne, 3)
 
-#stateProbabilityDistribution <- t(transitionMatrixOne%^%4%*%standardOriginVector)
+z <- stateProbabilityDistributionScenarioOne[is.element(rownames(stateProbabilityDistributionScenarioOne), scorigamiStates)]
+z <- matrix(z, ncol = 1, nrow = length(z))
+rownames(z) <- scorigamiStates
+sum(z)
 
-  
+scenarioOneOriginVector <- standardOriginVector
+scenarioOneOriginVector["0-0",] <- 0
+scenarioOneOriginVector["2-2",] <- 1
+stateProbabilityDistributionScenarioOne <- state_probability_distribution(scenarioOneOriginVector, transitionMatrixOne, 3)
+
+z <- stateProbabilityDistributionScenarioOne[is.element(rownames(stateProbabilityDistributionScenarioOne), scorigamiStates)]
+z <- matrix(z, ncol = 1, nrow = length(z))
+rownames(z) <- scorigamiStates
+sum(z)
+
+scenarioTwoOriginVector <- standardOriginVector
+scenarioTwoOriginVector["0-0",] <- 0
+scenarioTwoOriginVector["25-2",] <- 1
+stateProbabilityDistributionScenarioTwo <- state_probability_distribution(scenarioTwoOriginVector, transitionMatrixOne, 1)
+
+a <- stateProbabilityDistributionScenarioTwo[is.element(rownames(stateProbabilityDistributionScenarioTwo), scorigamiStates)]
+a <- matrix(a, ncol = 1, nrow = length(z))
+rownames(a) <- scorigamiStates
+sum(a)
 ```
 
 
