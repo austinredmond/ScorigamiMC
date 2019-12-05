@@ -1,12 +1,14 @@
 ---
 title: "Scorigami!"
-subtitle: "Using Markov Chains to Model Unique NFL Game Scores"
-subject: "Stat 322: Finite Markov Chains and Applications"
 author: "Austin Redmond"
-affiliation: "MacEwan University, Department of Mathematics and Statistics"
-email: "redmonda6@mymacewa.ca"
 date: "4/12/2019"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
+email: redmonda6@mymacewa.ca
+subject: 'Stat 322: Finite Markov Chains and Applications'
+subtitle: Using Markov Chains to Model Unique NFL Game Scores
+affiliation: MacEwan University, Department of Mathematics and Statistics
 ---
 
 ```{r setup, include=FALSE}
@@ -47,7 +49,7 @@ transition_matrix_two(states, pointsScoredFrequency)
 
 ```{r My Library, message=FALSE}
 
-source("~/GitHub/ScorigamiMCLibrary.R")
+source("~/GitHub/ScorigamiMC/ScorigamiMCLibrary.R")
 
 ```
 
@@ -442,3 +444,6 @@ Nogle, Kevin. "Football 1010: The one-point safety". The Phinsider, March 3, 201
 Pro Football Reference. "All Game Scores in Pro Football History". Dec 2, 2019. https://www.pro-football-reference.com/boxscores/game-scores.htm
 
 Pro Football Reference. "Missing Games in Pro Football History". Dec 2, 2019. https://www.pro-football-reference.com/boxscores/missing-scores.htm Accessed 2 December 2019.
+
+# Appendix
+
