@@ -11,6 +11,6 @@
 #### In partial fulfillment of the requirements for
 #### Stat 322: Finite Markov Chains and Applications
 
-#Can be found at:
+# Can be found at:
 
-#http://htmlpreview.github.io/?https://github.com/austinredmond/ScorigamiMC/blob/master/ScorigamiMC.html
+#### http://htmlpreview.github.io/?https://github.com/austinredmond/ScorigamiMC/blob/master/ScorigamiMC.html
