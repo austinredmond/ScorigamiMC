@@ -23,6 +23,11 @@ knitr::opts_chunk$set(echo = TRUE, root.dir = "~/GitHub/ScorigamiMC")
   
 #### Literature Review
 
+  No scholarly articles have been dedicated to the topic of scorigami. There has been literature presented on the use of Markov chains to predict outcomes in the NFL. For example, a Markov chain was used to model the, at the time, new overtime rule system where the team that wins the coin toss must score touchdown or concede safety for the overtime period to end on the first possession. The transition matrix was calculated using data on how a possession was most likely to end. The conclusion found that new rule mitigated the advantage the team that one the coin toss had in overtime (Jones). 
+  
+  Another article also used Markov chains to predict outcomes of NFL overtimes. In the second article, the transition matrix is constructed differently and simplified as certain ways of scoring were considered negligible. For example, a successful safety was not considered as a possible outcome because of its extremely low frequency (Leake). The conclusions found in the second article, was very similar to the conclusion found in the first article which justifies the simpler model in the second article
+
+
 # Methodology
 
 ### My Library
@@ -136,6 +141,7 @@ head(gameData)
 #### Possible States
 
   As described before, each state will include two scores. The first score is the winning team's total points and the second score is the losing team's total points. The winning and losing teams may be tied but (for this analysis) it is considered trivial which actual team is considered the winning and losing team. The minimum points scored by a team in one quarter is 0 points for the data set. On the other hand, the maximum points scored in one quarter by a team is 31 for the data set. Although unlikely, we consider the probability of a team scoring 31 points every quarter to have a non-zero probability. In an NFL game there are four steps representing a quarter that is played. By definition the final score of the winning team is always greater than or equal the final score of the losing team. The possible states are:
+  
   {"w-l"|w and l are elements of the set of integers between 0 and 124, w >= l}
 
 ```{r Possible States}
@@ -198,7 +204,9 @@ save(standardInitialDistribution, file="standardInitialDistribution.Rda")
 #### Points Scored Distributions
 
   The first step in constructing the transition matrices is to determine the distribution of points scored by a team in a quarter. The winning team in a given quarter is defined as the team that is winning the game at the start of the quarter. While the losing team in a given quarter is defined as the team that is losing the game at the start of the quarter. If the teams are tied at the start of the quarter, then the team that scored more points in that quarter is considered the winning team. The winning team and losing team can change from quarter-to-quarter. 
+  
   The graph below plots the points scored by the winning team and the losing team in one quarter for every quarter recorded in the data set. A single observation includes the points scored from both teams. The x-axis shows the quantity of points scored by the winning team in one quarter. The winning team has scored anywhere from 0 to 31 points. The x-axis shows the quantity of points scored by the losing team in one quarter. The losing team has scored anywhere from 0 to 28 points. 
+  
   The color of each cell in the grid represents the amount of observations where the winning team and the losing team specifically scored that many points in a quarter. This means that we are treating the scores of the winning team and losing team as dependent. There are 10 colors representing ten bins. The first bin has a black color and each bin thereafter is a lighter color. The tenth bin therefore is yellow. Any cell that is white has no observations. The size of the bins were determined so that they contain roughly the same number of observations. They are as follows: bin 1 (1 observation),  bin 2 (2 observations),  bin 3 (3 observations),  bin 4 (4-5 observations),  bin 5 (6-9 observations),  bin 6 (10-14 observations),  bin 7 (14-50 observations),  bin 8 (51-100 observations),  bin 9 (101-150 observations), and  bin 10 (151 observations or greater).
 ```{r Points Scored Frequency Matrix, error= FALSE, message = FALSE}
 #Load the game data.
@@ -221,8 +229,11 @@ plot(x, breaks=c(0,1,2,3,5,9,14,50,100,150,1000),col = magma, main="Points Score
 ```
   
   When observing the graph, it is clear that many combinations of scores have not occurred in period of 2009 to 2018. Given the yellow cells, it is evident that the most common combinations of scores are those where both teams have a score that is a linear transformation of [3x+7y] where x and y are 0, 1, or 2. This result is intuitive given that: first the 3-point field goal and the 7-point touchdown with successful point-after attempt are the most common ways to score and second it is difficult to score on 3 or more drives in a quarter as each quarter is time constrained to 15 minutes of game time. Scores that are only possible using at least one 2-point safety and/or 8-point touchdown are very unlikely to occur. A few examples of unlikely amounts of points scored in a quarter are 2, 4, 5, 8, 11, and 15 to name a few. Columns or rows featuring a rare score like those mentioned are likely to be mostly white, black, or darker shades of purple.
+  
   The amount of points scored by the winning and losing teams may or may not be independent. Only one team can have possession of the ball at any given point in time. It would be expected that a higher score by one team means that the other team has less position time. However, it is difficult to claim that the chance of scoring a rare score in a quarter is more or less likely based on the other team also scoring a rare score. The graph above shows many combinations of scores as impossible (the cell is white) when they are merely improbable. The sample of only includes 6691 different quarters. Given a larger sample size it is possible for more combinations to occur. Given this it is appropriate to build two different transition matrices based on two different assumptions.
+  
   Assumption #1: The points scored by each team is dependent. We should consider the points scored in the same quarter of the same game as dependent on each other.
+  
   Assumption #2: The points scored by each team is independent. We should consider distribution of points scored by the winning team and the losing team as two different distributions that exist separately.
 ```{r Get Points Scored Distributions, error=FALSE}
 
@@ -249,10 +260,14 @@ ggplot() +
 #### Transiton Matrix
 
   The transition matrix is constructed according to the two assumptions outlined in the previous section. They were:
+  
   Assumption #1: The points scored by each team is dependent. We should consider the points scored in the same quarter of the same game as dependent on each other.
+  
   Assumption #2: The points scored by each team is independent. We should consider distribution of points scored by the winning team and the losing team as two different distributions that exist separately.
+  
   For transition matrix one, the number of observations for each combination of points scored by the winning and losing teams is divided by the total number of observations. The resulting quotient is considered the relative frequency for that combination of points. If it is possible to get from one state to another state, there are usually two ways to get there. Either the winning team remained the winning team or the losing team became the winning team. The probability of both scenarios is calculated by adding the relevant points scored relative frequencies. All states where the winning team scored 94 or more points are considered an absorbing state. The justification for this decision is that it should not be possible to score 94 points in less than four quarters. This is based on the most points scored in a quarter being 31 points.
-    For transition matrix two, the number of observations for each row and column is divided by the total number of observations. The resulting quotients are considered the relative frequency for: the points scored by the winning team and the points scored by the losing team. Again if it is possible to get from one state to another state, there are usually two ways to get there. Either the winning team remained the winning team or the losing team became the winning team. The probability of the points scored by the winning team and the probability of the points scored by the losing team are assumed to be independent so they are directly multiplied by each other to calculate the probability of both events occurring. The scenarios that go from one state to the other are added together. All states where the winning or losing team scored 94 or more points are considered an absorbing state. The justification here is the same as the justification for the first transition matrix.
+  
+  For transition matrix two, the number of observations for each row and column is divided by the total number of observations. The resulting quotients are considered the relative frequency for: the points scored by the winning team and the points scored by the losing team. Again if it is possible to get from one state to another state, there are usually two ways to get there. Either the winning team remained the winning team or the losing team became the winning team. The probability of the points scored by the winning team and the probability of the points scored by the losing team are assumed to be independent so they are directly multiplied by each other to calculate the probability of both events occurring. The scenarios that go from one state to the other are added together. All states where the winning or losing team scored 94 or more points are considered an absorbing state. The justification here is the same as the justification for the first transition matrix.
 
 ```{r Transition Matrix}
 
@@ -276,14 +291,16 @@ save(transitionMatrixTwo, file="transitionMatrixTwo.Rda")
 
 ```
 
-# Results and Discussion
+# Results
 
 ### Using Markov Chains to Model Unique NFL Game Scores
 
 #### State Probability Distributions with Standard Initial Distributions
 
   The state probability distribution is calculated using the initial distribution, the transition matrix, and the number of steps (which are also known as the quarters to be played). The formula is written as:
+  
   transpose(transitionMatrix^steps)*initialDistribution
+  
   To calculate how often a Scorigami should occur in the average NFL game, the two transition matrices are tried, the standard initial distribution is used, and 4 steps are considered. The resulting state probability distribution is then conditioned so that only states that have never occurred before are considered. The sum of the remaining elements are calculated to find the probability of a scorigami.
 
 ```{r State Probability Distributions with Standard Initial Distributions}
@@ -321,14 +338,16 @@ print(paste("The probability of a scorigami for transition matrix two, and initi
 
 ```
 
-  From the r output, the probability of a scorigami is 3.82% and 4.11%. Among the first 192 games of the 2019 NFL season, 4 have been considered scorigami. Those games include: Baltimore Ravens 59, Miami Dolphins 10; 
-Tampa Bay Buccaneers 55, Los Angeles Rams 40; Cleveland Browns 40, Baltimore Ravens 25; and San Franciso 49ers 51, Carolina Panthers 13. Which can be verified on the NFL Scorigami website. The proportion of scorigami over the number of games in the 2019 season so far is 2.08%. This is close to the theoretical calculations.
+  From the r output, the probability of a scorigami is 3.82% and 4.11%. Among the first 192 games of the 2019 NFL season, 4 have been considered scorigami. Those games include: Baltimore Ravens 59, Miami Dolphins 10; Tampa Bay Buccaneers 55, Los Angeles Rams 40; Cleveland Browns 40, Baltimore Ravens 25; and San Franciso 49ers 51, Carolina Panthers 13. Which can be verified on the NFL Scorigami website. The proportion of scorigami over the number of games in the 2019 season so far is 2.08%. This is close to the theoretical calculations.
   
 #### State Probability Distributions with Interesting Scenarios
   
   For the sake of interest, it is possible to look at different initial distributions at different starting periods. Two scenarios are outlined as having a good chance of generating a scorigami.
+  
   Scenario One: After 1 quarter, the score is tied at 2-2 as both teams managed to record a safety. Transition matrix one is used as the points scored per quarter for the two teams are considered dependent. 
+  
   Scenario Two: After 3 quarters, the score is 32-2. Transition matrix two is used as the points scored per quarter for the two teams are considered independent.
+
 ```{r State Probability Distributions with Interesting Scenarios}
 #Load the first transition matrix.
 load("transitionMatrixOne.Rda")
@@ -359,9 +378,9 @@ print(paste("The probability of a scorigami for transition matrix two, initial s
 
 ```
 
-The chance of a scorigami are fairly high in these two scenarios. the first has a probability of 28.7% while the second has a probability of 68.2%. Both states would be considered rare occurrences because they require either a 2-point safety or an 8-point touchdown with successful 2-point conversion to occur first. Once an rare state has been reached, it is more probable for the next state to be rare.
+  The chance of a scorigami are fairly high in these two scenarios. the first has a probability of 28.7% while the second has a probability of 68.2%. Both states would be considered rare occurrences because they require either a 2-point safety or an 8-point touchdown with successful 2-point conversion to occur first. Once an rare state has been reached, it is more probable for the next state to be rare.
 
-#### Markov Chain Analysis
+### Markov Chain Analysis
 
 ```{r Markov Chain Analysis}
 
@@ -386,18 +405,22 @@ if(is.irreducible(transitionMatrixOneMarkovChain)) {
 
 ```
 
-There are 3410 absorbing states which is every state where the winning team scores 94 or more points. The states were defined this way because there are only four quarters in a game and it was determined that to score 94 points it is necessary to play through at least quarters.
+  There are 3410 absorbing states which is every state where the winning team scores 94 or more points. The states were defined this way because there are only four quarters in a game and it was determined that to score 94 points it is necessary to play through at least quarters.
 
-Given these absorbing states there is a steady state as eventually one of the two teams will reach at least 94 points and be absorbed if there is an infinite number of quarters. This result is not meaningful anyways as it is not possible to play more than 4 quarters in an NFL game. Even with overtime there the game will eventually end rather than continue to step Ad infinitum.
+  Given these absorbing states there is a steady state as eventually one of the two teams will reach at least 94 points and be absorbed if there is an infinite number of quarters. This result is not meaningful anyways as it is not possible to play more than 4 quarters in an NFL game. Even with overtime there the game will eventually end rather than continue to step Ad infinitum.
 
-The markov chain is not irreducible. Thus the markov chain is not ergodic as well. When a future state is accessible from a past state, the past state is not accessible from the future state. This is because there is no way to remove points scored once they have been recorded. There are no classes with more than one state. All states where the winning team has less than 94 points are considered transient because it is not possible to return to the particular state once that state is left. All states where the winning team has 94 or more points are considered recurrent as they are absorbing states.
+  The markov chain is not irreducible. Thus the markov chain is not ergodic as well. When a future state is accessible from a past state, the past state is not accessible from the future state. This is because there is no way to remove points scored once they have been recorded. There are no classes with more than one state. All states where the winning team has less than 94 points are considered transient because it is not possible to return to the particular state once that state is left. All states where the winning team has 94 or more points are considered recurrent as they are absorbing states.
 
-#### Discussion
+# Discussion & Conclusion
 
   The predicted probability of a scorigami occurring is high compared to the actual results of the 2019 NFL season. There are several reason as to why this result may come from limitations in the model. The probability of a tie is higher in the model than it is in real life because overtime is not considered in this analysis. Once overtime is entered the game is more likely to end with a winning team rather than two tying teams. A transition matrix for overtime could be constructed in order to calculate a more realistic final score distribution if the game is tied at the end of four quarters. Very high scores also have lower number of observations in real life compared to the model. The record for most points in a quarter is 73 points (Pro Football Reference, *All Game Scores in Pro Football History*). Which is a pace of18.25 points per quarter. It isn't realistic to consider a pace of above 18.25 points per quarter even though up to 31 points has been scored in a quarter.
+  
   Points scored in one quarter were considered independent from points scored in another quarter for this analysis. If the variance of points scored is different between games compared to the variance of points scored within games, then the transition matrix would be different. The combination of the points scored by the winning and losing team has the same probability at every state according to the transition matrix. For example, going from state "14-10" to "28-24" has the same probability as going from state "40-3" to "54-17" (each team scores 14 points). More work can be done to determine whether scoring in one quarter is independent from other quarters in the same game. A more refined or complex construction of the transition matrix should probably consider the properties of the current state when calculating the probabilities of transitioning from one state to another.
+  
   Regardless, the models produced a probability of a scorigami that was not wildly different from the actual results. Given a larger sample size of real data, the actual and expected probability of a scorigami may converge. It also made a lot of intuitive sense that the chance of scorigami was very high when the scenario included a score that was rare or uncommon to begin with like "2-2" or "32-2". As soon as a uncommon/rare way of scoring occurs the total score cannot be represented as a linear transformation in the form [3x+7y,3w+7z] which represents the most common ways to score.
+  
   The strength of the model can be evaluated by predicting the non-scorigami scores and testing whether that result aligns with real data. The prediction of a scorigami with a given initial distribution is difficult to verify because that score has never occurred before. If non-scorigami scores are considered, a state can be given and what states are most likely to be traveled to can be calculated with real data. A simpler approach would involve obtaining the distribution of actual final scores that occurred and comparing that to the state probability distributions produced by the markov chain models.
+  
   Overall, using markov chains to model unique NFL game scores is possible and produces results that align with the expectations of someone who is reasonably knowledgeable of the NFL. There are definitely more ways to construct the Markov chain compared to what was attempted in this analysis. Future work should focus on analyzing the assumptions made in this analysis in order to reject them or accept them.
 
 # Works Cited
@@ -407,6 +430,10 @@ Bois, John. "Every NFL Score Ever | Chart Party". *Youtube*, SB Nation, December
 Colon, David. "Jon Bois, editor at SB Nation, on making a career of weird sportswriting". Brokelyn, August 3, 2015. https://brokelyn.com/howd-get-cool-job-jon-bois-sb-nation-making-career-weird-sportswriting/.
 
 Horowitz, Marksim. "Introducing the nflscrapR Package". Github, https://github.com/maksimhorowitz/nflscrapR. Accessesd 15 November 2019.
+
+Jones, Chris. “The New Rules for NFL Overtime.” Mathematics Magazine, vol. 85, no. 4, 2012, pp. 277–283. JSTOR, www.jstor.org/stable/10.4169/math.mag.85.4.277.
+
+Leake, Jacqueline & Pritchard, Nicholas. (2016) The Advantage of the Coin Toss for the New Overtime System in the National Football League, The College Mathematics Journal, 47:1, 2-9, DOI: 10.4169/college.math.j.47.1.2 
 
 NFL Scorigami. "NFL Scorigami". Dec 2, 2019. https://nflscorigami.com/ Accessed 2 December 2019.
 
