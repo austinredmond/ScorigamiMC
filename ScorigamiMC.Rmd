@@ -323,8 +323,6 @@ load("gameData.Rda")
 head(gameData)
 ```
 
-### The Markov Chain Representation
-
 #### The Points Scored Distributions
 
   The first step in constructing the transition matrices is to determine the distribution of points scored by a team in a quarter. The winning team in a given quarter is defined as the team that is winning the game at the start of the quarter. While the losing team in a given quarter is defined as the team that is losing the game at the start of the quarter. If the teams are tied at the start of the quarter, then the team that scored more points in that quarter is considered the winning team. The winning team and losing team can change from quarter-to-quarter. 
@@ -340,7 +338,7 @@ pointsScoredFrequency <- points_scored_frequency(gameData)
 #Save the points scored frequency matrix to file.
 save(pointsScoredFrequency, file="pointsScoredFrequency.Rda")
 
-#Load the plot.matrix and viridis libraries to create a diagram of the points scored frequency matrix.
+#Load the plot.matrix and viridis libraries to create a graph of the points scored frequency matrix.
 library(plot.matrix)
 library(viridis)
 
@@ -350,35 +348,32 @@ x[x==0] <- NA
 plot(x, breaks=c(0,1,2,3,5,9,14,50,100,150,1000),col = magma, main="Points Scored Frequency Matrix", xlab = "Winning Team Points Scored in One Quarter", ylab = "Losing Team Points Scored in One Quarter")
 ```
   When observing the graph, it is clear that many combinations of scores have not occurred in period of 2009 to 2018. Given the yellow cells, it is evident that the most common combinations of scores are those where both teams have a score that is a linear transformation of [3x+7y] where x and y are 0, 1, or 2. This result is intuitive given that: first the 3-point field goal and the 7-point touchdown with successful point-after attempt are the most common ways to score and second it is difficult to score on 3 or more drives in a quarter as each quarter is time constrained to 15 minutes of game time. Scores that are only possible using at least one 2-point safety and/or 8-point touchdown are very unlikely to occur. A few examples of unlikely amounts of points scored in a quarter are 2, 4, 5, 8, 11, and 15 to name a few. Columns or rows featuring a rare score like those mentioned are likely to be mostly white, black, or darker shades of purple.
-  The amount of points scored by the winning and losing teams may or may not be independent. Only one team can have possession of the ball at any given point in time. It would be expected that a higher score by one team means that the other team has less position time. However, it is difficult to claim that the chance of scoring a rare score in a quarter is more or less likely based on the other team also scoring a rare score. The graph above shows many combinations of scores as impossible (the cell is white) when they are merely improbable. The sample of only includes 6691 different quarters. Given a larger sameple size it is possible for more combinations to occur. Given this it is appropriate to build two different transition matrices based on two different assumptions.
+  The amount of points scored by the winning and losing teams may or may not be independent. Only one team can have possession of the ball at any given point in time. It would be expected that a higher score by one team means that the other team has less position time. However, it is difficult to claim that the chance of scoring a rare score in a quarter is more or less likely based on the other team also scoring a rare score. The graph above shows many combinations of scores as impossible (the cell is white) when they are merely improbable. The sample of only includes 6691 different quarters. Given a larger sample size it is possible for more combinations to occur. Given this it is appropriate to build two different transition matrices based on two different assumptions.
   Assumption #1: The points scored by each team is dependent. We should consider the points scored in the same quarter of the same game as dependent on each other.
   Assumption #2: The points scored by each team is independent. We should consider distribution of points scored by the winning team and the losing team as two different distributions that exist separately.
-
 ```{r Get Points Scored Distributions, error=FALSE}
 
 #Get the individual observations from the points scored frequency mattrix.
 pointsScoredObservations <- points_scored_observations(pointsScoredFrequency)
-load("pointsScoredObservations.Rda")
 
-po#Save the individual points scored matrix to file.
+#Save the individual points scored matrix to file.
 save(pointsScoredObservations, file="pointsScoredObservations.Rda")
 
+#Load the ggplot2 library to creat a histogram with two distributions.
 library(ggplot2)
 
+#Create a histogram that graphs the winning team points scored and the losing team points scored separately.
 ggplot() + 
   geom_histogram(aes(x = pointsScoredObservations$losing_team_points_scored, fill = "r"), alpha = 0.3, bins = 31) +
   geom_histogram(aes(x = pointsScoredObservations$winning_team_points_scored, fill = "b"), alpha = 0.3, bins = 31) +
   scale_colour_manual(name ="Histograms of Points Scored", values = c("r" = "red", "b" = "blue"), labels=c("b" = "Winning Team", "r" = "Losing Team")) +
-  scale_fill_manual(name ="Legend", values = c("r" = "red", "b" = "blue"), labels=c("b" = "Winning Team", "r" = "Winning"))+
+  scale_fill_manual(name ="Legend", values = c("r" = "red", "b" = "blue"), labels=c("b" = "Winning Team", "r" = "Losing Team"))+
   labs(title = "Histograms of Points Scored", x = "Points Scored in One Quarter", y = "Frequency")
 
-ks.test(pointsScoredObservations$losing_team_points_scored, pointsScoredObservations$winning_team_points_scored)
 
-combinedPointsScoredFrequency <- combined_points_scored_frequency(pointsScoredObservations)
 
-ggplot()+
-  geom_histogram(aes(x=c(pointsScoredObservations$losing_team_points_scored, pointsScoredObservations$winning_team_points_scored)), bins = 31)+
-  labs(title = "Histogram of Points Scored by All Teams", x = "Points Scored in One Quarter", y = "Frequency")
+
+
 
 pointsScoredRelativeFrequency <- pointsScoredFrequency / sum(pointsScoredFrequency)
 save(pointsScoredRelativeFrequency, file="pointsScoredRelativeFrequency.Rda")
@@ -389,21 +384,24 @@ save(winningTeamPointsScoredRelativeFrequency, file="winningTeamPointsScoredRela
 losingTeamPointsScoredRelativeFrequency <- rowSums(pointsScoredFrequency) / sum(pointsScoredFrequency)
 save(losingTeamPointsScoredRelativeFrequency, file="losingTeamPointsScoredRelativeFrequency.Rda")
 
-combinedPointsScoredRelativeFrequency <- combinedPointsScoredFrequency / sum(pointsScoredFrequency)
-save(combinedPointsScoredRelativeFrequency, file="combinedPointsScoredRelativeFrequency.Rda")
 
 
 ```
+  The histogram above represents the distributions of points scored by each of the winning and losing teams. The winning teams are designated with the color blue and the losing teams are designated with the color red. It can be observed that the distributions are not normal. The same common scores (0,3,7,10...) and rare scores (2,4,5, 8...) noted previously are also displayed convincingly in this histogram. In terms of differences between the histograms. It can be observed that the losing teams score 0 points in a given quarter way more more often than the winning teams. If a team is losing at the start of a quarter, it is not surprising that they are more likely to score 0 points in that quarter because they are probably a worse offensive team. For the most part, the winning teams have more observations where the points scored is above 3 or above. However, there are three counter-examples that are interesting. When the points scored is 8, 11, or 15, there are more observations for the losing teams. If a team is losing, then they will play riskier in order to catch up to the team that is winning. Riskier play will result in teams that are more willing to go for a 2-point conversion attempt. If they are successful, then their points scored for that quarter will be a linear transformation of [3x+7y+8z] where 8 is equal to 1. The scores of 8, 11, and 15 are all likely in the described scenario.
+
+### The Markov Chain Representation
 
 #### Possible States
 
+  As described before, each state will include two scores. The first score is the winning team's total points and the second score is the losing team's total points. The winning and losing teams may be tied but (for this analysis) it is considered trivial which actual team is considered the winning and losing team. The minimum points scored by a team in one quarter is 0 points for the data set. On the other hand, the maximum points scored in one quarter by a team is 31 for the data set. Although unlikely, we consider the probability of a team scoring 31 points every quarter to have a non-zero probability. In an NFL game there are four steps representing a quarter that is played. The possible states are:
+  {"w-l"|w and l are elements of the set of integers between 0 and 124, w >= l}
+
 ```{r Possible States}
 
-load("pointsScoredObservations.Rda")
-
+#Create a vector of states with the first element being the score "0-0".
 states <- c("0-0")
 
-for(w in 1:(max(pointsScoredObservations$winning_team_points_scored) * 4)) {
+for(w in 1:124) {
   for(l in 0:w) {
     states[[length(states)+1]] <- paste(w,l, sep ="-")
   }
@@ -451,7 +449,6 @@ load("scorigamiStates.Rda")
 
 
 ```
-
 
 #### Origin Vector
 
