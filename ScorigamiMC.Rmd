@@ -447,5 +447,5 @@ Pro Football Reference. "Missing Games in Pro Football History". Dec 2, 2019. ht
 
 # Appendix
 
-Link to function library.
+Function library can be found at:
 https://github.com/austinredmond/ScorigamiMC/blob/master/ScorigamiMCLibrary.R
