@@ -312,10 +312,18 @@ transition_matrix_two <-function(states, pointsScoredFrequency) {
   return(transitionMatrixTwo)
 }
 
-state_probability_distribution <- function(originVector, transitionMatrix, quartersRemaining) {
+state_probability_distribution <- function(initialDistribution, transitionMatrix, quartersRemaining) {
   library(expm)
-  return(t(transitionMatrix%^%quartersRemaining)%*%originVector)
+  return(t(transitionMatrix%^%quartersRemaining)%*%initialDistribution)
+}
   
+scorigami_probability <- function(stateProbabilityDistribution, missingStates) {
+  
+  missingStateProbabilityDistribution <- stateProbabilityDistribution[is.element(rownames(stateProbabilityDistributionOne), missingStates)]
+  missingStateProbabilityDistribution <- matrix(missingStateProbabilityDistribution, ncol = 1, nrow = length(missingStateProbabilityDistribution))
+  rownames(missingStateProbabilityDistribution) <- missingStates
+  
+  return(sum(missingStateProbabilityDistribution))
 }
 ```
 
@@ -430,8 +438,6 @@ save(states, file="states.Rda")
 
 #### Missing States
 
-![Scorigami Matrix Found at www.nflscorigami.com](https://raw.githubusercontent.com/austinredmond/ScorigamiMC/master/nflscorigami.JPG?token=ACHPHCV3EIWTKC4RXC7GC4255BPLC)
-
   The diagram above illustrates most of the possible states that are considered in this analysis. Black squares are not considered possible states. Green squares indicate that the final score has occurred at least once. The white squares represent a final score that has never occurred before. A scorigami occurs whenever a unique final score occurs for the first time. Pro football reference provides a data set including all the missing final scores that have never occurred before.
   
 ```{r Missing States}
@@ -515,28 +521,17 @@ ggplot() +
   scale_colour_manual(name ="Histograms of Points Scored", values = c("r" = "red", "b" = "blue"), labels=c("b" = "Winning Team", "r" = "Losing Team")) +
   scale_fill_manual(name ="Legend", values = c("r" = "red", "b" = "blue"), labels=c("b" = "Winning Team", "r" = "Losing Team"))+
   labs(title = "Histograms of Points Scored", x = "Points Scored in One Quarter", y = "Frequency")
-
-
-
-
-
-
-pointsScoredRelativeFrequency <- pointsScoredFrequency / sum(pointsScoredFrequency)
-save(pointsScoredRelativeFrequency, file="pointsScoredRelativeFrequency.Rda")
-
-winningTeamPointsScoredRelativeFrequency <- colSums(pointsScoredFrequency) / sum(pointsScoredFrequency)
-save(winningTeamPointsScoredRelativeFrequency, file="winningTeamPointsScoredRelativeFrequency.Rda")
-
-losingTeamPointsScoredRelativeFrequency <- rowSums(pointsScoredFrequency) / sum(pointsScoredFrequency)
-save(losingTeamPointsScoredRelativeFrequency, file="losingTeamPointsScoredRelativeFrequency.Rda")
-
-
-
 ```
   
   The histogram above represents the distributions of points scored by each of the winning and losing teams. The winning teams are designated with the color blue and the losing teams are designated with the color red. It can be observed that the distributions are not normal. The same common scores (0,3,7,10...) and rare scores (2,4,5, 8...) noted previously are also displayed convincingly in this histogram. In terms of differences between the histograms. It can be observed that the losing teams score 0 points in a given quarter way more more often than the winning teams. If a team is losing at the start of a quarter, it is not surprising that they are more likely to score 0 points in that quarter because they are probably a worse offensive team. For the most part, the winning teams have more observations where the points scored is above 3 or above. However, there are three counter-examples that are interesting. When the points scored is 8, 11, or 15, there are more observations for the losing teams. If a team is losing, then they will play riskier in order to catch up to the team that is winning. Riskier play will result in teams that are more willing to go for a 2-point conversion attempt. If they are successful, then their points scored for that quarter will be a linear transformation of [3x+7y+8z] where 8 is equal to 1. The scores of 8, 11, and 15 are all likely in the described scenario.
 
 #### Transiton Matrix
+
+  The transition matrix is constructed according to the two assumptions outlined in the previous section. They were:
+  Assumption #1: The points scored by each team is dependent. We should consider the points scored in the same quarter of the same game as dependent on each other.
+  Assumption #2: The points scored by each team is independent. We should consider distribution of points scored by the winning team and the losing team as two different distributions that exist separately.
+  For transition matrix one, the number of observations for each combination of points scored by the winning and losing teams is divided by the total number of observations. The resulting quotient is considered the relative frequency for that combination of points. If it is possible to get from one state to another state, there are usually two ways to get there. Either the winning team remained the winning team or the losing team became the winning team. The probability of both scenarios is calculated by adding the relevant points scored relative frequencies. All states where the winning team scored 94 or more points are considered an absorbing state. The justification for this decision is that it should not be possible to score 94 points in less than four quarters. This is based on the most points scored in a quarter being 31 points.
+    For transition matrix two, the number of observations for each row and column is divided by the total number of observations. The resulting quotients are considered the relative frequency for: the points scored by the winning team and the points scored by the losing team. Again if it is possible to get from one state to another state, there are usually two ways to get there. Either the winning team remained the winning team or the losing team became the winning team. The probability of the points scored by the winning team and the probability of the points scored by the losing team are assumed to be independent so they are directly multiplied by each other to calculate the probability of both events occurring. The scenarios that go from one state to the other are added together. All states where the winning or losing team scored 94 or more points are considered an absorbing state. The justification here is the same as the justification for the first transition matrix.
 
 ```{r Transition Matrix}
 
@@ -560,64 +555,80 @@ save(transitionMatrixTwo, file="transitionMatrixTwo.Rda")
 
 ```
 
-#### Probability of Each State After 4 Steps
+#### State Probability Distributions
 
-```{r}
+  The state probability distribution is calculated using the initial distribution, the transition matrix, and the number of steps (which are also known as the quarters to be played). The formula is written as:
+  transpose(transitionMatrix^steps)*initialDistribution
+  To calculate how often a Scorigami should occur in the average NFL game, the two transition matrices are tried, the standard initial distribution is used, and 4 steps are considered. The resulting state probability distribution is then conditioned so that only states that have never occurred before are considered. The sum of the remaining elements are calculated to find the probability of a scorigami.
+
+```{r State Probability Distributions with Standard Initial Dristributions}
 
 #Load the standard origin Matrix which designates that every game begins with a score of "0-0" with 100% probability.
-load("standardOriginVector.Rda")
+load("standardInitialDistribution.Rda")
 
+#Load the first transition matrix.
 load("transitionMatrixOne.Rda")
-stateProbabilityDistributionOne <- state_probability_distribution(standardOriginVector, transitionMatrixOne, 4)
+
+#Calculate the state probability distribution after the 4 transitions.
+#stateProbabilityDistributionOne <- state_probability_distribution(standardInitialDistribution, transitionMatrixOne, 4) #This is the original line.
+load("stateProbabilityDistributionOne.Rda")
+
+#Save state probability distribution to file.
 save(stateProbabilityDistributionOne, file = "stateProbabilityDistributionOne.Rda")
 
+#Load the second transition matrix.
 load("transitionMatrixTwo.Rda")
-stateProbabilityDistributionTwo <- state_probability_distribution(standardOriginVector, transitionMatrixTwo, 4)
+
+#Calculate the state probability distribution after 4 transitions.
+#stateProbabilityDistributionTwo <- state_probability_distribution(standardInitialDistribution, transitionMatrixTwo, 4) #This is the original line.
+load("stateProbabilityDistributionTwo.Rda")
+
+#Save state probability distribution to file.
 save(stateProbabilityDistributionTwo, file = "stateProbabilityDistributionTwo.Rda")
 
-x <- stateProbabilityDistributionOne[is.element(rownames(stateProbabilityDistributionOne), scorigamiStates)]
-x <- matrix(x, ncol = 1, nrow = length(x))
-rownames(x) <- scorigamiStates
-sum(x)
+#Load missing states vector from file.
+load("missingStates.Rda")
 
-y <- stateProbabilityDistributionTwo[is.element(rownames(stateProbabilityDistributionTwo), scorigamiStates)]
-y <- matrix(y, ncol = 1, nrow = length(y))
-rownames(y) <- scorigamiStates
-sum(y)
+#Print the scoigami probability of the statna
+print(paste("The probability of a scorigami for transition matrix one, initial state of [0-0], and four quarters to play is ",scorigami_probability(stateProbabilityDistributionOne*100, missingStates), "%!", sep=""))
 
-scenarioOneOriginVector <- standardOriginVector
-scenarioOneOriginVector["0-0",] <- 0
-scenarioOneOriginVector["2-2",] <- 1
-stateProbabilityDistributionScenarioOne <- state_probability_distribution(scenarioOneOriginVector, transitionMatrixOne, 3)
+print(paste("The probability of a scorigami for transition matrix two, and initial state of [0-0], and four quarters to play is is ",scorigami_probability(stateProbabilityDistributionTwo*100, missingStates), "%!", sep=""))
 
-z <- stateProbabilityDistributionScenarioOne[is.element(rownames(stateProbabilityDistributionScenarioOne), scorigamiStates)]
-z <- matrix(z, ncol = 1, nrow = length(z))
-rownames(z) <- scorigamiStates
-sum(z)
-
-scenarioOneOriginVector <- standardOriginVector
-scenarioOneOriginVector["0-0",] <- 0
-scenarioOneOriginVector["2-2",] <- 1
-stateProbabilityDistributionScenarioOne <- state_probability_distribution(scenarioOneOriginVector, transitionMatrixOne, 3)
-
-z <- stateProbabilityDistributionScenarioOne[is.element(rownames(stateProbabilityDistributionScenarioOne), scorigamiStates)]
-z <- matrix(z, ncol = 1, nrow = length(z))
-rownames(z) <- scorigamiStates
-sum(z)
-
-scenarioTwoOriginVector <- standardOriginVector
-scenarioTwoOriginVector["0-0",] <- 0
-scenarioTwoOriginVector["25-2",] <- 1
-stateProbabilityDistributionScenarioTwo <- state_probability_distribution(scenarioTwoOriginVector, transitionMatrixOne, 1)
-
-a <- stateProbabilityDistributionScenarioTwo[is.element(rownames(stateProbabilityDistributionScenarioTwo), scorigamiStates)]
-a <- matrix(a, ncol = 1, nrow = length(z))
-rownames(a) <- scorigamiStates
-sum(a)
 ```
 
+  From the r output, the probability of a scorigami is 3.82% and 4.11%. Among the first 192 games of the 2019 NFL season, 4 have been considered scorigami. Those games include: Baltimore Ravens 59, Miami Dolphins 10; 
+Tampa Bay Buccaneers 55, Los Angeles Rams 40; Cleveland Browns 40, Baltimore Ravens 25; and San Franciso 49ers 51, Carolina Panthers 13. Which can be verified on the NFL Scorigami website. The proportion of scorigami over the number of games in the 2019 season so far is 2.08%. This is close to the theoretical calculations.
+  For the sake of interest, it is possible to look at different initial distributions at different starting periods. Two scenarios are outlined as having a good chance of generating a scorigami.
+  Scenario One: After 1 quarter, the score is tied at 2-2 as both teams managed to record a safety. Transition matrix one is used as the points scored per quarter for the two teams are considered dependent. 
+  Scenario Two: After 3 quarters, the score is 32-2. Transition matrix two is used as the points scored per quarter for the two teams are considered independent.
+```{r State Probability Distributions with Interesting Scenarios}
+#Load the first transition matrix.
+load("transitionMatrixOne.Rda")
 
+#Load the second transition matrix.
+load("transitionMatrixTwo.Rda")
 
+load("states.Rda")
+load("missingStates.Rda")
+
+#stateProbabilityDistributionScenarioOne <- state_probability_distribution(initial_distribution(states, "2-2"), transitionMatrixOne, 3) #This is the original line.
+load("stateProbabilityDistributionScenarioOne.Rda")
+
+save(stateProbabilityDistributionScenarioOne, file = "stateProbabilityDistributionScenarioOne.Rda")
+
+print(paste("The probability of a scorigami for transition matrix one, initial state of [2-2], and three quarters to play is ",
+            scorigami_probability(stateProbabilityDistributionScenarioOne*100, missingStates), "%!", sep=""))
+
+#stateProbabilityDistributionScenarioTwo <- state_probability_distribution(initial_distribution(states, "32-2"), transitionMatrixTwo, 1) #This is the original line.
+load("stateProbabilityDistributionScenarioTwo.Rda")
+
+save(stateProbabilityDistributionScenarioTwo, file = "stateProbabilityDistributionScenarioTwo.Rda")
+print(paste("The probability of a scorigami for transition matrix two, initial state of [32-2], and one quarter to play is ",
+            scorigami_probability(stateProbabilityDistributionScenarioTwo*100, missingStates), "%!", sep=""))
+
+```
+
+The chance of a scorigami are fairly high in these two scenarios. the first has a probability of 28.7% while the second has a probability of 68.2%. Both states would be considered rare occurrences because they require either a 2-point safety or an 8-point touchdown with scuccesful 2-point conversion to occur first. Once an rare state has been reached, it is more probable for the next state to be rare.
 
 # Works Cited
 
