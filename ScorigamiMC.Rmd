@@ -229,7 +229,10 @@ initial_distribution <- function(states, givenState) {
   return(initialDistribution)
 }
 
-transition_matrix_one <- fucntion(states, pointsScoredRelativeFrequency) {
+transition_matrix_one <- function(states, pointsScoredFrequency) {
+  
+  #Calculate the relative frequency of each observation in the points scored matrix.
+  pointsScoredRelativeFrequency <- pointsScoredFrequency / sum(pointsScoredFrequency)
   
   x <- length(states)
   transitionMatrixOne <- matrix(rep(0, x^2), nrow = x, ncol = x)
@@ -261,10 +264,52 @@ transition_matrix_one <- fucntion(states, pointsScoredRelativeFrequency) {
         transitionMatrixOne[previousState, previousState] <- 1
     }
   }
+  
+  return(transitionMatrixOne)
 }
 
-transition_matrix_two <-function(states, ) {
+transition_matrix_two <-function(states, pointsScoredFrequency) {
   
+  #Calculate the relative frequency of each amount of points scored for the winning team.
+  winningTeamPointsScoredRelativeFrequency <- colSums(pointsScoredFrequency) / sum(pointsScoredFrequency)
+
+  #Calculate the relative frequency of each amount of points scored for the winning team.
+  losingTeamPointsScoredRelativeFrequency <- rowSums(pointsScoredFrequency) / sum(pointsScoredFrequency)
+  
+  transitionMatrixTwo <- matrix(rep(0, x^2), nrow = x, ncol = x)
+  rownames(transitionMatrixTwo) <- states
+  colnames(transitionMatrixTwo) <- states
+
+  for(previousState in rownames(transitionMatrixTwo)) {
+    previousStateSplit <- strsplit(previousState, '-')[[1]]
+    tryCatch({
+      for(previousWinningTeamPointsScored in as.character(0:31)) {
+        updatedWinningTeamSCore <- as.numeric(previousStateSplit[1]) + as.numeric(previousWinningTeamPointsScored)
+        winningTeamPointsScoredProbability <- winningTeamPointsScoredRelativeFrequency[previousWinningTeamPointsScored]
+        for(previousLosingTeamPointsScored in as.character(0:31)) {
+          updatedLosingTeamScore <- as.numeric(previousStateSplit[2]) + as.numeric(previousLosingTeamPointsScored)
+          newWinningTeamSCore <- max(updatedWinningTeamSCore, updatedLosingTeamScore)
+          newLosingTeamScore <- min(updatedWinningTeamSCore, updatedLosingTeamScore)
+          nextState <- paste(newWinningTeamSCore, newLosingTeamScore, sep = "-")
+          losingTeamPointsScoredProbability <- losingTeamPointsScoredRelativeFrequency[previousLosingTeamPointsScored]
+          transitionMatrixTwo[previousState, nextState] <- transitionMatrixTwo[previousState, nextState] + winningTeamPointsScoredProbability * losingTeamPointsScoredProbability
+          #print(paste(previousState, nextState, transitionMatrixTwo[previousState, nextState], sep = ", "))
+        }
+      }},
+      error=function(e){
+        transitionMatrixTwo[previousState, ] <- rep(0,x)
+        transitionMatrixTwo[previousState, previousState] <- transitionMatrixTwo[previousState, previousState] + 1})
+  }
+  
+  for(previousState in rownames(transitionMatrixTwo)) {
+    if(sum(transitionMatrixTwo[previousState, ]) != 1) {
+        transitionMatrixTwo[previousState, ] <- rep(0,x)
+        transitionMatrixTwo[previousState, previousState] <- 1
+    }
+  }
+
+  
+  return(transitionMatrixTwo)
 }
 
 state_probability_distribution <- function(originVector, transitionMatrix, quartersRemaining) {
@@ -495,89 +540,23 @@ save(losingTeamPointsScoredRelativeFrequency, file="losingTeamPointsScoredRelati
 
 ```{r Transition Matrix}
 
+#Load the states vector and the points scored frequency matrix.
 load("states.Rda")
-
 load("pointsScoredFrequency.Rda")
 
-#The the relative frequency of each observation in the points scored matrix.
-pointsScoredRelativeFrequency <- pointsScoredFrequency / sum(pointsScoredFrequency)
-
-transitionMatrixOne <- transition_matrix_one(states, pointsScoredRelativeFrequency)
-
-x <- length(states)
-transitionMatrixOne <- matrix(rep(0, x^2), nrow = x, ncol = x)
-rownames(transitionMatrixOne) <- states
-colnames(transitionMatrixOne) <- states
-
-for(previousState in rownames(transitionMatrixOne)) {
-  previousStateSplit <- strsplit(previousState, '-')[[1]]
-  tryCatch({
-    for(previousWinningTeamPointsScored in colnames(pointsScoredRelativeFrequency)) {
-      updatedWinningTeamScore <- as.numeric(previousStateSplit[1]) + as.numeric(previousWinningTeamPointsScored)
-      for(previousLosingTeamPointsScored in rownames(pointsScoredRelativeFrequency)) {
-        updatedLosingTeamScore <- as.numeric(previousStateSplit[2]) + as.numeric(previousLosingTeamPointsScored)
-        newWinningTeamSCore <- max(updatedWinningTeamScore, updatedLosingTeamScore)
-        newLosingTeamScore <- min(updatedWinningTeamScore, updatedLosingTeamScore)
-        nextState <- paste(newWinningTeamSCore, newLosingTeamScore, sep = "-")
-        transitionMatrixOne[previousState,nextState] <- transitionMatrixOne[previousState, nextState] + pointsScoredRelativeFrequency[previousLosingTeamPointsScored,previousWinningTeamPointsScored]
-      }
-    }},
-    error=function(e){
-      transitionMatrixOne[previousState, ] <- rep(0,x)
-      transitionMatrixOne[previousState, previousState] <- transitionMatrixOne[previousState, previousState] + 1})
-}
-
-for(previousState in rownames(transitionMatrixOne)) {
-  if(sum(transitionMatrixOne[previousState, ]) != 1) {
-      transitionMatrixOne[previousState, ] <- rep(0,x)
-      transitionMatrixOne[previousState, previousState] <- 1
-  }
-}
-
-save(transitionMatrixOne, file="transitionMatrixOne.Rda")
-
+#Construct the first matrix based on assumption #1.
+#transitionMatrixOne <- transition_matrix_one(states, pointsScoredFrequency) #This is the original line.
 load("transitionMatrixOne.Rda")
 
-load("winningTeamPointsScoredRelativeFrequency.Rda")
+#Save the first transition matrix to file.
+save(transitionMatrixOne, file="transitionMatrixOne.Rda")
 
-load("losingTeamPointsScoredRelativeFrequency.Rda")
-
-transitionMatrixTwo <- matrix(rep(0, x^2), nrow = x, ncol = x)
-rownames(transitionMatrixTwo) <- states
-colnames(transitionMatrixTwo) <- states
-
-for(previousState in rownames(transitionMatrixTwo)) {
-  previousStateSplit <- strsplit(previousState, '-')[[1]]
-  tryCatch({
-    for(previousWinningTeamPointsScored in as.character(0:31)) {
-      updatedWinningTeamSCore <- as.numeric(previousStateSplit[1]) + as.numeric(previousWinningTeamPointsScored)
-      winningTeamPointsScoredProbability <- winningTeamPointsScoredRelativeFrequency[previousWinningTeamPointsScored]
-      for(previousLosingTeamPointsScored in as.character(0:31)) {
-        updatedLosingTeamScore <- as.numeric(previousStateSplit[2]) + as.numeric(previousLosingTeamPointsScored)
-        newWinningTeamSCore <- max(updatedWinningTeamSCore, updatedLosingTeamScore)
-        newLosingTeamScore <- min(updatedWinningTeamSCore, updatedLosingTeamScore)
-        nextState <- paste(newWinningTeamSCore, newLosingTeamScore, sep = "-")
-        losingTeamPointsScoredProbability <- losingTeamPointsScoredRelativeFrequency[previousLosingTeamPointsScored]
-        transitionMatrixTwo[previousState, nextState] <- transitionMatrixTwo[previousState, nextState] + winningTeamPointsScoredProbability * losingTeamPointsScoredProbability
-        #print(paste(previousState, nextState, transitionMatrixTwo[previousState, nextState], sep = ", "))
-      }
-    }},
-    error=function(e){
-      transitionMatrixTwo[previousState, ] <- rep(0,x)
-      transitionMatrixTwo[previousState, previousState] <- transitionMatrixTwo[previousState, previousState] + 1})
-}
-
-for(previousState in rownames(transitionMatrixTwo)) {
-  if(sum(transitionMatrixTwo[previousState, ]) != 1) {
-      transitionMatrixTwo[previousState, ] <- rep(0,x)
-      transitionMatrixTwo[previousState, previousState] <- 1
-  }
-}
-
-save(transitionMatrixTwo, file="transitionMatrixTwo.Rda")
-
+#Construct the second matrix based on assumption #2
+#transitionMatrixTwo <- transition_matrix_two(states, pointsScoredFrequency) #This is the original line.
 load("transitionMatrixTwo.Rda")
 
+#Save the second transition matrix to file.
+save(transitionMatrixTwo, file="transitionMatrixTwo.Rda")
 
 ```
 
