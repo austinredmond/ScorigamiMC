@@ -216,25 +216,61 @@ points_scored_observations <- function(pointsScoredFrequency) {
   return(pointsScoredObservations)
 }
 
-combined_points_scored_frequency <- function(pointsScoredObservations) {
+initial_distribution <- function(states, givenState) {
   
-  combinedPointsScoredObservations <- c(pointsScoredObservations$losing_team_points_scored, pointsScoredObservations$winning_team_points_scored)
-  #combinedFrequency <- vector(mode="numeric", length = max(combinedPointsScoredObservations) + 1)
-  combinedFrequency <- matrix(rep(0, 32), nrow = 32, ncol=1)
+  #Create matrix of size 1 column and the same number of rows as the number of states.
+  initialDistribution <- matrix(rep(0, length(states)), ncol = 1, nrow = length(states))
   
-  for(i in 1:length(combinedPointsScoredObservations)) {
-    combinedFrequency[[combinedPointsScoredObservations[i]+1]] <- combinedFrequency[[combinedPointsScoredObservations[i]+1]] + 1
+  #Rename the rows of the matrix to correspond to a state.
+  rownames(initialDistribution) <- states
+  
+  initialDistribution[givenState,1] <- 1
+  
+  return(initialDistribution)
+}
+
+transition_matrix_one <- fucntion(states, pointsScoredRelativeFrequency) {
+  
+  x <- length(states)
+  transitionMatrixOne <- matrix(rep(0, x^2), nrow = x, ncol = x)
+  rownames(transitionMatrixOne) <- states
+  colnames(transitionMatrixOne) <- states
+  
+  for(previousState in rownames(transitionMatrixOne)) {
+    
+    previousStateSplit <- strsplit(previousState, '-')[[1]]
+    tryCatch({
+      for(previousWinningTeamPointsScored in colnames(pointsScoredRelativeFrequency)) {
+        updatedWinningTeamScore <- as.numeric(previousStateSplit[1]) + as.numeric(previousWinningTeamPointsScored)
+        for(previousLosingTeamPointsScored in rownames(pointsScoredRelativeFrequency)) {
+          updatedLosingTeamScore <- as.numeric(previousStateSplit[2]) + as.numeric(previousLosingTeamPointsScored)
+          newWinningTeamSCore <- max(updatedWinningTeamScore, updatedLosingTeamScore)
+          newLosingTeamScore <- min(updatedWinningTeamScore, updatedLosingTeamScore)
+          nextState <- paste(newWinningTeamSCore, newLosingTeamScore, sep = "-")
+          transitionMatrixOne[previousState,nextState] <- transitionMatrixOne[previousState, nextState] + pointsScoredRelativeFrequency[previousLosingTeamPointsScored,previousWinningTeamPointsScored]
+        }
+      }},
+      error=function(e){
+        transitionMatrixOne[previousState, ] <- rep(0,x)
+        transitionMatrixOne[previousState, previousState] <- transitionMatrixOne[previousState, previousState] + 1})
   }
   
-  rownames(combinedFrequency) <- as.character(0:max(combinedPointsScoredObservations))
-  colnames(combinedFrequency) <- c("combined_team_points_scored")
+  for(previousState in rownames(transitionMatrixOne)) {
+    if(sum(transitionMatrixOne[previousState, ]) != 1) {
+        transitionMatrixOne[previousState, ] <- rep(0,x)
+        transitionMatrixOne[previousState, previousState] <- 1
+    }
+  }
+}
+
+transition_matrix_two <-function(states, ) {
   
-  return(combinedFrequency)
 }
 
 state_probability_distribution <- function(originVector, transitionMatrix, quartersRemaining) {
   library(expm)
   return(t(transitionMatrix%^%quartersRemaining)%*%originVector)
+  
 }
 ```
 
@@ -323,7 +359,71 @@ load("gameData.Rda")
 head(gameData)
 ```
 
-#### The Points Scored Distributions
+### The Markov Chain Representation
+
+#### Possible States
+
+  As described before, each state will include two scores. The first score is the winning team's total points and the second score is the losing team's total points. The winning and losing teams may be tied but (for this analysis) it is considered trivial which actual team is considered the winning and losing team. The minimum points scored by a team in one quarter is 0 points for the data set. On the other hand, the maximum points scored in one quarter by a team is 31 for the data set. Although unlikely, we consider the probability of a team scoring 31 points every quarter to have a non-zero probability. In an NFL game there are four steps representing a quarter that is played. By definition the final score of the winning team is always greater than or equal the final score of the losing team. The possible states are:
+  {"w-l"|w and l are elements of the set of integers between 0 and 124, w >= l}
+
+```{r Possible States}
+
+#Create a vector of states with the first element being the score "0-0".
+states <- c("0-0")
+
+#Loop through each of the possible states,"w-l".
+#Add the result to the states vector.
+for(w in 1:124) {
+  for(l in 0:w) {
+    states[[length(states)+1]] <- paste(w,l, sep ="-")
+  }
+}
+
+#Save the states vector to file.
+save(states, file="states.Rda")
+```
+
+#### Missing States
+
+![Scorigami Matrix Found at www.nflscorigami.com](https://raw.githubusercontent.com/austinredmond/ScorigamiMC/master/nflscorigami.JPG?token=ACHPHCV3EIWTKC4RXC7GC4255BPLC)
+
+  The diagram above illustrates most of the possible states that are considered in this analysis. Black squares are not considered possible states. Green squares indicate that the final score has occurred at least once. The white squares represent a final score that has never occurred before. A scorigami occurs whenever a unique final score occurs for the first time. Pro football reference provides a data set including all the missing final scores that have never occurred before.
+  
+```{r Missing States}
+
+#Load the missing score data from csv.
+missingScoresData <- read.csv(file="missingScores.csv", header = TRUE, sep = ",")
+
+#The all missing states between "2-2" and "70-70".
+missingStates <- as.character(missingScoresData$Score)
+
+#Add each state between "71-0" and "124-124"
+for(w in 71:124) {
+  for(l in 0:w) {
+    missingStates[[length(missingStates)+1]] <- paste(w,l, sep="-")
+  }
+}
+
+#Remove the states "72-41" and "73-0" because they have occurred before.
+missingStates <- setdiff(missingStates, c("72-41", "73-0"))
+
+save(missingStates, file="missingStates.Rda")
+```
+
+#### Initial Distribution
+
+  The initial distribution defines the probability of each state at the start. In the context of an NFL game, only one score can exist at a time. As every game starts with a score of 0 to 0, a standard initial distribution will have 100% probability of being state "0-0". It is possible to start the projection at other points in time such as the start of the second, third, and fourth quarters. If this is the case, the number of transitions will need to reflect the different point in time.
+  
+```{r Initial Distribution}
+
+load("states.Rda")
+
+standardInitialDistribution <- initial_distribution(states, "0-0")
+
+save(standardInitialDistribution, file="standardInitialDistribution.Rda")
+```
+
+#### Points Scored Distributions
 
   The first step in constructing the transition matrices is to determine the distribution of points scored by a team in a quarter. The winning team in a given quarter is defined as the team that is winning the game at the start of the quarter. While the losing team in a given quarter is defined as the team that is losing the game at the start of the quarter. If the teams are tied at the start of the quarter, then the team that scored more points in that quarter is considered the winning team. The winning team and losing team can change from quarter-to-quarter. 
   The graph below plots the points scored by the winning team and the losing team in one quarter for every quarter recorded in the data set. A single observation includes the points scored from both teams. The x-axis shows the quantity of points scored by the winning team in one quarter. The winning team has scored anywhere from 0 to 31 points. The x-axis shows the quantity of points scored by the losing team in one quarter. The losing team has scored anywhere from 0 to 28 points. 
@@ -347,6 +447,7 @@ x <- pointsScoredFrequency
 x[x==0] <- NA
 plot(x, breaks=c(0,1,2,3,5,9,14,50,100,150,1000),col = magma, main="Points Scored Frequency Matrix", xlab = "Winning Team Points Scored in One Quarter", ylab = "Losing Team Points Scored in One Quarter")
 ```
+  
   When observing the graph, it is clear that many combinations of scores have not occurred in period of 2009 to 2018. Given the yellow cells, it is evident that the most common combinations of scores are those where both teams have a score that is a linear transformation of [3x+7y] where x and y are 0, 1, or 2. This result is intuitive given that: first the 3-point field goal and the 7-point touchdown with successful point-after attempt are the most common ways to score and second it is difficult to score on 3 or more drives in a quarter as each quarter is time constrained to 15 minutes of game time. Scores that are only possible using at least one 2-point safety and/or 8-point touchdown are very unlikely to occur. A few examples of unlikely amounts of points scored in a quarter are 2, 4, 5, 8, 11, and 15 to name a few. Columns or rows featuring a rare score like those mentioned are likely to be mostly white, black, or darker shades of purple.
   The amount of points scored by the winning and losing teams may or may not be independent. Only one team can have possession of the ball at any given point in time. It would be expected that a higher score by one team means that the other team has less position time. However, it is difficult to claim that the chance of scoring a rare score in a quarter is more or less likely based on the other team also scoring a rare score. The graph above shows many combinations of scores as impossible (the cell is white) when they are merely improbable. The sample of only includes 6691 different quarters. Given a larger sample size it is possible for more combinations to occur. Given this it is appropriate to build two different transition matrices based on two different assumptions.
   Assumption #1: The points scored by each team is dependent. We should consider the points scored in the same quarter of the same game as dependent on each other.
@@ -387,87 +488,8 @@ save(losingTeamPointsScoredRelativeFrequency, file="losingTeamPointsScoredRelati
 
 
 ```
+  
   The histogram above represents the distributions of points scored by each of the winning and losing teams. The winning teams are designated with the color blue and the losing teams are designated with the color red. It can be observed that the distributions are not normal. The same common scores (0,3,7,10...) and rare scores (2,4,5, 8...) noted previously are also displayed convincingly in this histogram. In terms of differences between the histograms. It can be observed that the losing teams score 0 points in a given quarter way more more often than the winning teams. If a team is losing at the start of a quarter, it is not surprising that they are more likely to score 0 points in that quarter because they are probably a worse offensive team. For the most part, the winning teams have more observations where the points scored is above 3 or above. However, there are three counter-examples that are interesting. When the points scored is 8, 11, or 15, there are more observations for the losing teams. If a team is losing, then they will play riskier in order to catch up to the team that is winning. Riskier play will result in teams that are more willing to go for a 2-point conversion attempt. If they are successful, then their points scored for that quarter will be a linear transformation of [3x+7y+8z] where 8 is equal to 1. The scores of 8, 11, and 15 are all likely in the described scenario.
-
-### The Markov Chain Representation
-
-#### Possible States
-
-  As described before, each state will include two scores. The first score is the winning team's total points and the second score is the losing team's total points. The winning and losing teams may be tied but (for this analysis) it is considered trivial which actual team is considered the winning and losing team. The minimum points scored by a team in one quarter is 0 points for the data set. On the other hand, the maximum points scored in one quarter by a team is 31 for the data set. Although unlikely, we consider the probability of a team scoring 31 points every quarter to have a non-zero probability. In an NFL game there are four steps representing a quarter that is played. The possible states are:
-  {"w-l"|w and l are elements of the set of integers between 0 and 124, w >= l}
-    
-![Scorigami Matrix Found at www.nflscorigami.com](/Images/Scorigami.JPG)
-
-```{r Possible States}
-
-#Create a vector of states with the first element being the score "0-0".
-states <- c("0-0")
-
-for(w in 1:124) {
-  for(l in 0:w) {
-    states[[length(states)+1]] <- paste(w,l, sep ="-")
-  }
-}
-
-#states <- states[(states != "1-0") & (states != "1-1") & (states != "2-1") & (states != "3-1") & (states != "4-1") & (states != "5-1") & (states != "7-1")]
-
-save(states, file="states.Rda")
-
-```
-
-#### Scorigami States
-
-```{r}
-missingScoresData <- read.csv(file="missingScores.csv", header = TRUE, sep = ",")
-
-scorigamiStates <- as.character(missingScoresData$Score)
-
-additionalScorigamiStates <- c("70-70")
-
-for(w in 71:124) {
-  for(l in 70:w) {
-    additionalScorigamiStates[[length(additionalScorigamiStates)+1]] <- paste(w,l, sep="-")
-  }
-}
-
-additionalScorigamiStates <- setdiff(additionalScorigamiStates, c("70-70", "70-27", "72-41", "73-0"))
-
-scorigamiStates <- c(scorigamiStates, additionalScorigamiStates)
-
-ties <- c()
-
-for(t in 0:124) {
-  ties[[length(ties)+1]] <- paste(t,t,sep = "-")
-}
-
-tiedScorigamiStates <- intersect(scorigamiStates, ties)
-nonTieScorigamiStates <- setdiff(scorigamiStates, tiedScorigamiStates)
-
-
-save(scorigamiStates, file="scorigamiStates.Rda")
-
-load("scorigamiStates.Rda")
-
-
-
-```
-
-#### Origin Vector
-
-```{r}
-
-load("states.Rda")
-
-standardOriginVector <- matrix(rep(0, length(states)), ncol = 1, nrow = length(states))
-
-rownames(standardOriginVector) <- states
-
-standardOriginVector["0-0",1] <- 1
-
-save(standardOriginVector, file="standardOriginVector.Rda")
-
-
-```
 
 #### Transiton Matrix
 
@@ -475,10 +497,14 @@ save(standardOriginVector, file="standardOriginVector.Rda")
 
 load("states.Rda")
 
+load("pointsScoredFrequency.Rda")
+
+#The the relative frequency of each observation in the points scored matrix.
+pointsScoredRelativeFrequency <- pointsScoredFrequency / sum(pointsScoredFrequency)
+
+transitionMatrixOne <- transition_matrix_one(states, pointsScoredRelativeFrequency)
+
 x <- length(states)
-
-load("pointsScoredRelativeFrequency.Rda")
-
 transitionMatrixOne <- matrix(rep(0, x^2), nrow = x, ncol = x)
 rownames(transitionMatrixOne) <- states
 colnames(transitionMatrixOne) <- states
@@ -622,8 +648,10 @@ Colon, David. "Jon Bois, editor at SB Nation, on making a career of weird sports
 
 Nogle, Kevin. "Football 1010: The one-point safety". The Phinsider, March 3, 2018. https://www.thephinsider.com/2018/3/3/17063556/football-101-the-one-point-safety.
 
-NFL Scorigami. "NFL Scorigami". Dec 3, 2019. https://nflscorigami.com/
+NFL Scorigami. "NFL Scorigami". Dec 2, 2019. https://nflscorigami.com/ Accessed 2 December 2019.
 
-Horowitz, Marksim. "Introducing the nflscrapR Package." Github, https://github.com/maksimhorowitz/nflscrapR. Accessesd 15 November 2019.
+Horowitz, Marksim. "Introducing the nflscrapR Package". Github, https://github.com/maksimhorowitz/nflscrapR. Accessesd 15 November 2019.
+
+Pro Football Reference. "Missing Games in Pro Football History". Dec 2, 2019. https://www.pro-football-reference.com/boxscores/missing-scores.htm Accessed 2 December 2019.
 
 https://seahawkswire.usatoday.com/2018/12/03/seahawks-continue-bizarre-scorigami-streak-under-pete-carroll/
