@@ -5,7 +5,7 @@ subject: "Stat 322: Finite Markov Chains and Applications"
 author: "Austin Redmond"
 affiliation: "MacEwan University, Department of Mathematics and Statistics"
 email: "redmonda6@mymacewa.ca"
-date: "3/12/2019"
+date: "4/12/2019"
 output: html_document
 ---
 
