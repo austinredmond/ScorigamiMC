@@ -395,6 +395,8 @@ save(losingTeamPointsScoredRelativeFrequency, file="losingTeamPointsScoredRelati
 
   As described before, each state will include two scores. The first score is the winning team's total points and the second score is the losing team's total points. The winning and losing teams may be tied but (for this analysis) it is considered trivial which actual team is considered the winning and losing team. The minimum points scored by a team in one quarter is 0 points for the data set. On the other hand, the maximum points scored in one quarter by a team is 31 for the data set. Although unlikely, we consider the probability of a team scoring 31 points every quarter to have a non-zero probability. In an NFL game there are four steps representing a quarter that is played. The possible states are:
   {"w-l"|w and l are elements of the set of integers between 0 and 124, w >= l}
+    
+![Scorigami Matrix Found at www.nflscorigami.com](/Images/Scorigami.JPG)
 
 ```{r Possible States}
 
