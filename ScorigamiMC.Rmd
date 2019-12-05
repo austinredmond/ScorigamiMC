@@ -27,304 +27,23 @@ knitr::opts_chunk$set(echo = TRUE, root.dir = "~/GitHub/ScorigamiMC")
 
 ### My Library
 
-My library consists of functions a quick
+Call my libary in order to use functions stored in another r script. The listed functions take the form.
+
+game_data(gameIds, gamePlayByPlay)
+initial_distribution(states, givenState)
+multi_game_scrape(seasons, types, weeks = NULL, teams = NULL)
+multi_game_play_by_play(gameIDs)
+points_scored_frequency(gameData)
+points_scored_observations(pointsScoredFrequency)
+scorigami_probability(stateProbabilityDistribution, missingStates)
+state_probability_distribution(initialDistribution, transitionMarix, quarters remaining)
+transition_matrix_one(states, pointsScoredFrequency)
+transition_matrix_two(states, pointsScoredFrequency)
 
 ```{r My Library, message=FALSE}
 
-library(dplyr, nflscrapR)
+source("~/GitHub/ScorigamiMCLibrary.R")
 
-multi_scrape_game_ids <- function(seasons, types, weeks = NULL, teams = NULL) {
-  library(nflscrapR)
-  
-  #Schema of the scraped game IDs data frame.
-  scrapedGameIDsColNames <- c("type", "game_id", "home_team", "away_team", "week", "season", "state_of_game", "game_url", "home_score", "away_score")
-  #Create scraped game IDs data frame with a matching number of columns.
-  scrapedGameIDs <- as.data.frame(matrix(,0,length(scrapedGameIDsColNames)))
-  #Rename columns of scraped game IDs data frame.
-  names(scrapedGameIDs) <- scrapedGameIDsColNames
-  
-  #Loop for each season and each type of game (which is either preseason, regular season, or postseason).
-  for(s in seasons) {
-    for(ty in types) {
-      #Bind the data scraped so far with the data scraped using the current season, game type, week, and team information.
-      scrapedGameIDs <- rbind(scrapedGameIDs, scrape_game_ids(s, ty, weeks = weeks, teams = teams))
-    }
-  }
-  
-  #Return the scraped gamed IDs data frame.
-  return(scrapedGameIDs)
-}
-
-multi_scrape_game_play_by_play <- function(gameIDs) {
-  library(nflscrapR)  
-  
-  #Create an empty list for each game ids' play-by-play data.
-  scrapedGamePlayByPlayList = list()
-  
-  #Loop for each game id.
-  for(i in 1:nrow(gameIDs)) {
-    #Bind the data scraped so far with the data scraped using the current game id.
-    tempScrapedGamePlayByPlay <- scrape_game_play_by_play(gameIDs[i,"game_id"], gameIDs[i,"type"], gameIDs[i,"season"], 0)
-    scrapedGamePlayByPlayList[[i]] <- tempScrapedGamePlayByPlay[tempScrapedGamePlayByPlay$quarter_end==1,c("game_id","home_team","away_team","qtr","total_home_score","total_away_score")]
-  }
-  
-  #
-  scrapedGamePlayByPlay <- do.call(rbind, scrapedGamePlayByPlayList)
-  
-  scrapedGamePlayByPlay <- scrapedGamePlayByPlay[complete.cases(scrapedGamePlayByPlay), ]
-  
-  scrapedGamePlayByPlay <- unique(scrapedGamePlayByPlay)
-
-  return(scrapedGamePlayByPlay)
-}
-
-game_data <- function(gameIDs, gamePlayByPlay) {
-
-  n <- length(gameIDs$game_id)
-  
-  game_id <- gameIDs$game_id
-  home_team <- gameIDs$home_team
-  away_team <- gameIDs$away_team
-  
-  qtr1_home_score <- rep(NA, length=n)
-  qtr1_away_score <- rep(NA, length=n)
-  qtr2_home_score <- rep(NA, length=n)
-  qtr2_away_score <- rep(NA, length=n)
-  qtr3_home_score <- rep(NA, length=n)
-  qtr3_away_score <- rep(NA, length=n)
-  qtr4_home_score <- rep(NA, length=n)
-  qtr4_away_score <- rep(NA, length=n)
-  
-  final_home_score <- gameIDs$home_score 
-  final_away_score <- gameIDs$away_score
-  
-  for(i in 1:length(game_id)){
-    tryCatch({qtr1_home_score[[i]] <- as.numeric(gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==1,][[1,"total_home_score"]])}, error=function(e){})
-    tryCatch({qtr1_away_score[[i]] <- as.numeric(gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==1,][[1,"total_away_score"]])}, error=function(e){})
-    tryCatch({qtr2_home_score[[i]] <- as.numeric(gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==2,][[1,"total_home_score"]])}, error=function(e){})
-    tryCatch({qtr2_away_score[[i]] <- as.numeric(gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==2,][[1,"total_away_score"]])}, error=function(e){})
-    tryCatch({qtr3_home_score[[i]] <- as.numeric(gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==3,][[1,"total_home_score"]])}, error=function(e){})
-    tryCatch({qtr3_away_score[[i]] <- as.numeric(gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==3,][[1,"total_away_score"]])}, error=function(e){})
-    tryCatch({qtr4_home_score[[i]] <- as.numeric(gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==4,][[1,"total_home_score"]])}, error=function(e){})
-    tryCatch({qtr4_away_score[[i]] <- as.numeric(gamePlayByPlay[gamePlayByPlay$game_id==game_id[i]&gamePlayByPlay$qtr==4,][[1,"total_away_score"]])}, error=function(e){})
-  }
-  
-  gameData <- do.call(cbind,list(game_id, home_team, away_team, qtr1_home_score, qtr1_away_score, qtr2_home_score, qtr2_away_score, qtr3_home_score, qtr3_away_score, qtr4_home_score, qtr4_away_score, final_home_score, final_away_score))
-  rownames(gameData) <- 1:n
-  colnames(gameData) <- c("game_id", "home_team", "away_team", "qtr1_home_score", "qtr1_away_score", "qtr2_home_score", "qtr2_away_score", "qtr3_home_score", "qtr3_away_score", "qtr4_home_score", "qtr4_away_score", "final_home_score", "final_away_score")
-  gameData <- as.data.frame(gameData)
-  
-  return(gameData)
-}
-
-points_scored_frequency <- function(gameData){
-  
-  pointsScoredFrequency <- matrix(rep(0, 32*32), nrow = 32, ncol=32)
-  rownames(pointsScoredFrequency) <- 0:31
-  colnames(pointsScoredFrequency) <- 0:31
-  
-  winning_team_scored <- NULL
-  losing_team_scored <- NULL
-  
-  for(i in 1:length(gameData$game_id)){
-  
-    tryCatch({
-      winning_team_scored <- as.character(max(as.numeric(as.character(gameData$qtr1_home_score[i])),as.numeric(as.character(gameData$qtr1_away_score[i]))))
-      losing_team_scored <- as.character(min(as.numeric(as.character(gameData$qtr1_home_score[i])),as.numeric(as.character(gameData$qtr1_away_score[i]))))
-      pointsScoredFrequency[losing_team_scored,winning_team_scored] <- pointsScoredFrequency[losing_team_scored,winning_team_scored] + 1
-    }, error=function(e){})
-    
-    tryCatch({
-      if(as.numeric(as.character(gameData$qtr1_home_score[i]))>as.numeric(as.character(gameData$qtr1_away_score[i]))){
-        winning_team_scored <- as.character(as.numeric(as.character(gameData$qtr2_home_score[i])) - as.numeric(as.character(gameData$qtr1_home_score[i])))
-        losing_team_scored <- as.character(as.numeric(as.character(gameData$qtr2_away_score[i])) - as.numeric(as.character(gameData$qtr1_away_score[i])))
-      } else if(as.numeric(as.character(gameData$qtr1_home_score[i]))<as.numeric(as.character(gameData$qtr1_away_score[i]))) {
-        winning_team_scored <- as.character(as.numeric(as.character(gameData$qtr2_away_score[i])) - as.numeric(as.character(gameData$qtr1_away_score[i])))
-        losing_team_scored <- as.character(as.numeric(as.character(gameData$qtr2_home_score[i])) - as.numeric(as.character(gameData$qtr1_home_score[i])))
-      } else {
-        winning_team_scored <- as.character(max(as.numeric(as.character(gameData$qtr2_home_score[i])) - as.numeric(as.character(gameData$qtr1_home_score[i])),
-                                                as.numeric(as.character(gameData$qtr2_away_score[i])) - as.numeric(as.character(gameData$qtr1_away_score[i]))))
-        losing_team_scored <- as.character(min(as.numeric(as.character(gameData$qtr2_home_score[i])) - as.numeric(as.character(gameData$qtr1_home_score[i])),
-                                               as.numeric(as.character(gameData$qtr2_away_score[i])) - as.numeric(as.character(gameData$qtr1_away_score[i]))))
-      }
-      pointsScoredFrequency[losing_team_scored,winning_team_scored] <- pointsScoredFrequency[losing_team_scored,winning_team_scored] + 1
-        
-    },error=function(e){})
-    
-    tryCatch({
-      if(as.numeric(as.character(gameData$qtr2_home_score[i]))>as.numeric(as.character(gameData$qtr2_away_score[i]))){
-        winning_team_scored <- as.character(as.numeric(as.character(gameData$qtr3_home_score[i])) - as.numeric(as.character(gameData$qtr2_home_score[i])))
-        losing_team_scored <- as.character(as.numeric(as.character(gameData$qtr3_away_score[i])) - as.numeric(as.character(gameData$qtr2_away_score[i])))
-      } else if(as.numeric(as.character(gameData$qtr2_home_score[i]))<as.numeric(as.character(gameData$qtr2_away_score[i]))) {
-        winning_team_scored <- as.character(as.numeric(as.character(gameData$qtr3_away_score[i])) - as.numeric(as.character(gameData$qtr2_away_score[i])))
-        losing_team_scored <- as.character(as.numeric(as.character(gameData$qtr3_home_score[i])) - as.numeric(as.character(gameData$qtr2_home_score[i])))
-      } else {
-        winning_team_scored <- as.character(max(as.numeric(as.character(gameData$qtr3_home_score[i])) - as.numeric(as.character(gameData$qtr2_home_score[i])),
-                                                as.numeric(as.character(gameData$qtr3_away_score[i])) - as.numeric(as.character(gameData$qtr2_away_score[i]))))
-        losing_team_scored <- as.character(min(as.numeric(as.character(gameData$qtr3_home_score[i])) - as.numeric(as.character(gameData$qtr2_home_score[i])),
-                                               as.numeric(as.character(gameData$qtr3_away_score[i])) - as.numeric(as.character(gameData$qtr2_away_score[i]))))
-      }
-      pointsScoredFrequency[losing_team_scored,winning_team_scored] <- pointsScoredFrequency[losing_team_scored,winning_team_scored] + 1
-        
-    },error=function(e){})
-    
-    tryCatch({
-      if(as.numeric(as.character(gameData$qtr3_home_score[i]))>as.numeric(as.character(gameData$qtr3_away_score[i]))){
-        winning_team_scored <- as.character(as.numeric(as.character(gameData$qtr4_home_score[i])) - as.numeric(as.character(gameData$qtr3_home_score[i])))
-        losing_team_scored <- as.character(as.numeric(as.character(gameData$qtr4_away_score[i])) - as.numeric(as.character(gameData$qtr3_away_score[i])))
-      } else if(as.numeric(as.character(gameData$qtr3_home_score[i]))<as.numeric(as.character(gameData$qtr3_away_score[i]))) {
-        winning_team_scored <- as.character(as.numeric(as.character(gameData$qtr4_away_score[i])) - as.numeric(as.character(gameData$qtr3_away_score[i])))
-        losing_team_scored <- as.character(as.numeric(as.character(gameData$qtr4_home_score[i])) - as.numeric(as.character(gameData$qtr3_home_score[i])))
-      } else {
-        winning_team_scored <- as.character(max(as.numeric(as.character(gameData$qtr4_home_score[i])) - as.numeric(as.character(gameData$qtr3_home_score[i])),
-                                                as.numeric(as.character(gameData$qtr4_away_score[i])) - as.numeric(as.character(gameData$qtr3_away_score[i]))))
-        losing_team_scored <- as.character(min(as.numeric(as.character(gameData$qtr4_home_score[i])) - as.numeric(as.character(gameData$qtr3_home_score[i])),
-                                               as.numeric(as.character(gameData$qtr4_away_score[i])) - as.numeric(as.character(gameData$qtr3_away_score[i]))))
-      }
-      pointsScoredFrequency[losing_team_scored,winning_team_scored] <- pointsScoredFrequency[losing_team_scored,winning_team_scored] + 1
-        
-    },error=function(e){})
-  }
-  
-  return(pointsScoredFrequency)
-  
-}
-
-points_scored_observations <- function(pointsScoredFrequency) {
-  
-  pointsScoredObservations <- list()
-
-  for(c in as.character(0:31)) {
-    for(r in as.character(0:31)) {
-      n <- pointsScoredFrequency[r,c]
-      temp <- list()
-      tryCatch({
-        temp <- list()
-        for (i in 1:n) {
-          temp[[i]] <- c(as.numeric(as.character(r)), as.numeric(as.character(c)))
-        }
-        pointsScoredObservations <- append(pointsScoredObservations, temp)
-      },error=function(e){})
-    }
-  }
-  
-  pointsScoredObservations <- do.call(rbind, pointsScoredObservations)
-  colnames(pointsScoredObservations) <- c("losing_team_points_scored","winning_team_points_scored")
-  
-  pointsScoredObservations <- as.data.frame(pointsScoredObservations)
-  
-  return(pointsScoredObservations)
-}
-
-initial_distribution <- function(states, givenState) {
-  
-  #Create matrix of size 1 column and the same number of rows as the number of states.
-  initialDistribution <- matrix(rep(0, length(states)), ncol = 1, nrow = length(states))
-  
-  #Rename the rows of the matrix to correspond to a state.
-  rownames(initialDistribution) <- states
-  
-  initialDistribution[givenState,1] <- 1
-  
-  return(initialDistribution)
-}
-
-transition_matrix_one <- function(states, pointsScoredFrequency) {
-  
-  #Calculate the relative frequency of each observation in the points scored matrix.
-  pointsScoredRelativeFrequency <- pointsScoredFrequency / sum(pointsScoredFrequency)
-  
-  x <- length(states)
-  transitionMatrixOne <- matrix(rep(0, x^2), nrow = x, ncol = x)
-  rownames(transitionMatrixOne) <- states
-  colnames(transitionMatrixOne) <- states
-  
-  for(previousState in rownames(transitionMatrixOne)) {
-    
-    previousStateSplit <- strsplit(previousState, '-')[[1]]
-    tryCatch({
-      for(previousWinningTeamPointsScored in colnames(pointsScoredRelativeFrequency)) {
-        updatedWinningTeamScore <- as.numeric(previousStateSplit[1]) + as.numeric(previousWinningTeamPointsScored)
-        for(previousLosingTeamPointsScored in rownames(pointsScoredRelativeFrequency)) {
-          updatedLosingTeamScore <- as.numeric(previousStateSplit[2]) + as.numeric(previousLosingTeamPointsScored)
-          newWinningTeamSCore <- max(updatedWinningTeamScore, updatedLosingTeamScore)
-          newLosingTeamScore <- min(updatedWinningTeamScore, updatedLosingTeamScore)
-          nextState <- paste(newWinningTeamSCore, newLosingTeamScore, sep = "-")
-          transitionMatrixOne[previousState,nextState] <- transitionMatrixOne[previousState, nextState] + pointsScoredRelativeFrequency[previousLosingTeamPointsScored,previousWinningTeamPointsScored]
-        }
-      }},
-      error=function(e){
-        transitionMatrixOne[previousState, ] <- rep(0,x)
-        transitionMatrixOne[previousState, previousState] <- transitionMatrixOne[previousState, previousState] + 1})
-  }
-  
-  for(previousState in rownames(transitionMatrixOne)) {
-    if(sum(transitionMatrixOne[previousState, ]) != 1) {
-        transitionMatrixOne[previousState, ] <- rep(0,x)
-        transitionMatrixOne[previousState, previousState] <- 1
-    }
-  }
-  
-  return(transitionMatrixOne)
-}
-
-transition_matrix_two <-function(states, pointsScoredFrequency) {
-  
-  #Calculate the relative frequency of each amount of points scored for the winning team.
-  winningTeamPointsScoredRelativeFrequency <- colSums(pointsScoredFrequency) / sum(pointsScoredFrequency)
-
-  #Calculate the relative frequency of each amount of points scored for the winning team.
-  losingTeamPointsScoredRelativeFrequency <- rowSums(pointsScoredFrequency) / sum(pointsScoredFrequency)
-  
-  transitionMatrixTwo <- matrix(rep(0, x^2), nrow = x, ncol = x)
-  rownames(transitionMatrixTwo) <- states
-  colnames(transitionMatrixTwo) <- states
-
-  for(previousState in rownames(transitionMatrixTwo)) {
-    previousStateSplit <- strsplit(previousState, '-')[[1]]
-    tryCatch({
-      for(previousWinningTeamPointsScored in as.character(0:31)) {
-        updatedWinningTeamSCore <- as.numeric(previousStateSplit[1]) + as.numeric(previousWinningTeamPointsScored)
-        winningTeamPointsScoredProbability <- winningTeamPointsScoredRelativeFrequency[previousWinningTeamPointsScored]
-        for(previousLosingTeamPointsScored in as.character(0:31)) {
-          updatedLosingTeamScore <- as.numeric(previousStateSplit[2]) + as.numeric(previousLosingTeamPointsScored)
-          newWinningTeamSCore <- max(updatedWinningTeamSCore, updatedLosingTeamScore)
-          newLosingTeamScore <- min(updatedWinningTeamSCore, updatedLosingTeamScore)
-          nextState <- paste(newWinningTeamSCore, newLosingTeamScore, sep = "-")
-          losingTeamPointsScoredProbability <- losingTeamPointsScoredRelativeFrequency[previousLosingTeamPointsScored]
-          transitionMatrixTwo[previousState, nextState] <- transitionMatrixTwo[previousState, nextState] + winningTeamPointsScoredProbability * losingTeamPointsScoredProbability
-          #print(paste(previousState, nextState, transitionMatrixTwo[previousState, nextState], sep = ", "))
-        }
-      }},
-      error=function(e){
-        transitionMatrixTwo[previousState, ] <- rep(0,x)
-        transitionMatrixTwo[previousState, previousState] <- transitionMatrixTwo[previousState, previousState] + 1})
-  }
-  
-  for(previousState in rownames(transitionMatrixTwo)) {
-    if(sum(transitionMatrixTwo[previousState, ]) != 1) {
-        transitionMatrixTwo[previousState, ] <- rep(0,x)
-        transitionMatrixTwo[previousState, previousState] <- 1
-    }
-  }
-
-  
-  return(transitionMatrixTwo)
-}
-
-state_probability_distribution <- function(initialDistribution, transitionMatrix, quartersRemaining) {
-  library(expm)
-  return(t(transitionMatrix%^%quartersRemaining)%*%initialDistribution)
-}
-  
-scorigami_probability <- function(stateProbabilityDistribution, missingStates) {
-  
-  missingStateProbabilityDistribution <- stateProbabilityDistribution[is.element(rownames(stateProbabilityDistributionOne), missingStates)]
-  missingStateProbabilityDistribution <- matrix(missingStateProbabilityDistribution, ncol = 1, nrow = length(missingStateProbabilityDistribution))
-  rownames(missingStateProbabilityDistribution) <- missingStates
-  
-  return(sum(missingStateProbabilityDistribution))
-}
 ```
 
 
@@ -437,6 +156,8 @@ save(states, file="states.Rda")
 ```
 
 #### Missing States
+
+![Scorigami Matrix Found at www.nflscorigami.com](https://www.ualberta.ca/~aredmond/nflscorigami.JPG)
 
   The diagram above illustrates most of the possible states that are considered in this analysis. Black squares are not considered possible states. Green squares indicate that the final score has occurred at least once. The white squares represent a final score that has never occurred before. A scorigami occurs whenever a unique final score occurs for the first time. Pro football reference provides a data set including all the missing final scores that have never occurred before.
   
@@ -555,13 +276,17 @@ save(transitionMatrixTwo, file="transitionMatrixTwo.Rda")
 
 ```
 
-#### State Probability Distributions
+# Results and Discussion
+
+### Using Markov Chains to Model Unique NFL Game Scores
+
+#### State Probability Distributions with Standard Initial Distributions
 
   The state probability distribution is calculated using the initial distribution, the transition matrix, and the number of steps (which are also known as the quarters to be played). The formula is written as:
   transpose(transitionMatrix^steps)*initialDistribution
   To calculate how often a Scorigami should occur in the average NFL game, the two transition matrices are tried, the standard initial distribution is used, and 4 steps are considered. The resulting state probability distribution is then conditioned so that only states that have never occurred before are considered. The sum of the remaining elements are calculated to find the probability of a scorigami.
 
-```{r State Probability Distributions with Standard Initial Dristributions}
+```{r State Probability Distributions with Standard Initial Distributions}
 
 #Load the standard origin Matrix which designates that every game begins with a score of "0-0" with 100% probability.
 load("standardInitialDistribution.Rda")
@@ -598,6 +323,9 @@ print(paste("The probability of a scorigami for transition matrix two, and initi
 
   From the r output, the probability of a scorigami is 3.82% and 4.11%. Among the first 192 games of the 2019 NFL season, 4 have been considered scorigami. Those games include: Baltimore Ravens 59, Miami Dolphins 10; 
 Tampa Bay Buccaneers 55, Los Angeles Rams 40; Cleveland Browns 40, Baltimore Ravens 25; and San Franciso 49ers 51, Carolina Panthers 13. Which can be verified on the NFL Scorigami website. The proportion of scorigami over the number of games in the 2019 season so far is 2.08%. This is close to the theoretical calculations.
+  
+#### State Probability Distributions with Interesting Scenarios
+  
   For the sake of interest, it is possible to look at different initial distributions at different starting periods. Two scenarios are outlined as having a good chance of generating a scorigami.
   Scenario One: After 1 quarter, the score is tied at 2-2 as both teams managed to record a safety. Transition matrix one is used as the points scored per quarter for the two teams are considered dependent. 
   Scenario Two: After 3 quarters, the score is 32-2. Transition matrix two is used as the points scored per quarter for the two teams are considered independent.
@@ -608,12 +336,14 @@ load("transitionMatrixOne.Rda")
 #Load the second transition matrix.
 load("transitionMatrixTwo.Rda")
 
+#Load the states and missing states vectors.
 load("states.Rda")
 load("missingStates.Rda")
 
 #stateProbabilityDistributionScenarioOne <- state_probability_distribution(initial_distribution(states, "2-2"), transitionMatrixOne, 3) #This is the original line.
 load("stateProbabilityDistributionScenarioOne.Rda")
 
+#Save the state probability distribution for scenario one.
 save(stateProbabilityDistributionScenarioOne, file = "stateProbabilityDistributionScenarioOne.Rda")
 
 print(paste("The probability of a scorigami for transition matrix one, initial state of [2-2], and three quarters to play is ",
@@ -622,13 +352,53 @@ print(paste("The probability of a scorigami for transition matrix one, initial s
 #stateProbabilityDistributionScenarioTwo <- state_probability_distribution(initial_distribution(states, "32-2"), transitionMatrixTwo, 1) #This is the original line.
 load("stateProbabilityDistributionScenarioTwo.Rda")
 
+#Save the state probability distribution for scenario one.
 save(stateProbabilityDistributionScenarioTwo, file = "stateProbabilityDistributionScenarioTwo.Rda")
 print(paste("The probability of a scorigami for transition matrix two, initial state of [32-2], and one quarter to play is ",
             scorigami_probability(stateProbabilityDistributionScenarioTwo*100, missingStates), "%!", sep=""))
 
 ```
 
-The chance of a scorigami are fairly high in these two scenarios. the first has a probability of 28.7% while the second has a probability of 68.2%. Both states would be considered rare occurrences because they require either a 2-point safety or an 8-point touchdown with scuccesful 2-point conversion to occur first. Once an rare state has been reached, it is more probable for the next state to be rare.
+The chance of a scorigami are fairly high in these two scenarios. the first has a probability of 28.7% while the second has a probability of 68.2%. Both states would be considered rare occurrences because they require either a 2-point safety or an 8-point touchdown with successful 2-point conversion to occur first. Once an rare state has been reached, it is more probable for the next state to be rare.
+
+#### Markov Chain Analysis
+
+```{r Markov Chain Analysis}
+
+library(markovchain)
+
+#Create a markov chain object from transition matrix one.
+#transitionMatrixOneMarkovChain <- new("markovchain", states = rownames(transitionMatrixOne), byrow = TRUE, transitionMatrix = transitionMatrixOne, name = "transitionMatrixOneMarkovChain") #This is the original line.
+load("transitionMatrixOneMarkovChain.Rda")
+
+#Save the markov chain object from transition matrix one to file.
+save(transitionMatrixOneMarkovChain, file="transitionMatrixOneMarkovChain.Rda")
+
+print(paste("For the transition matrix one markov chain. There are this many absorbing states: ", length(absorbingStates(transitionMatrixOneMarkovChain))))
+
+if(is.irreducible(transitionMatrixOneMarkovChain)) {
+  print("The markov chain is irreducible.")
+} else {
+  print("The markov chain is not irreducible.")
+  print("The markov chain is not ergodic.")
+  print("The mean first passage time is not defined.")
+}
+
+```
+
+There are 3410 absorbing states which is every state where the winning team scores 94 or more points. The states were defined this way because there are only four quarters in a game and it was determined that to score 94 points it is necessary to play through at least quarters.
+
+Given these absorbing states there is a steady state as eventually one of the two teams will reach at least 94 points and be absorbed if there is an infinite number of quarters. This result is not meaningful anyways as it is not possible to play more than 4 quarters in an NFL game. Even with overtime there the game will eventually end rather than continue to step Ad infinitum.
+
+The markov chain is not irreducible. Thus the markov chain is not ergodic as well. When a future state is accessible from a past state, the past state is not accessible from the future state. This is because there is no way to remove points scored once they have been recorded. There are no classes with more than one state. All states where the winning team has less than 94 points are considered transient because it is not possible to return to the particular state once that state is left. All states where the winning team has 94 or more points are considered recurrent as they are absorbing states.
+
+#### Discussion
+
+  The predicted probability of a scorigami occurring is high compared to the actual results of the 2019 NFL season. There are several reason as to why this result may come from limitations in the model. The probability of a tie is higher in the model than it is in real life because overtime is not considered in this analysis. Once overtime is entered the game is more likely to end with a winning team rather than two tying teams. A transition matrix for overtime could be constructed in order to calculate a more realistic final score distribution if the game is tied at the end of four quarters. Very high scores also have lower number of observations in real life compared to the model. The record for most points in a quarter is 73 points (Pro Football Reference, *All Game Scores in Pro Football History*). Which is a pace of18.25 points per quarter. It isn't realistic to consider a pace of above 18.25 points per quarter even though up to 31 points has been scored in a quarter.
+  Points scored in one quarter were considered independent from points scored in another quarter for this analysis. If the variance of points scored is different between games compared to the variance of points scored within games, then the transition matrix would be different. The combination of the points scored by the winning and losing team has the same probability at every state according to the transition matrix. For example, going from state "14-10" to "28-24" has the same probability as going from state "40-3" to "54-17" (each team scores 14 points). More work can be done to determine whether scoring in one quarter is independent from other quarters in the same game. A more refined or complex construction of the transition matrix should probably consider the properties of the current state when calculating the probabilities of transitioning from one state to another.
+  Regardless, the models produced a probability of a scorigami that was not wildly different from the actual results. Given a larger sample size of real data, the actual and expected probability of a scorigami may converge. It also made a lot of intuitive sense that the chance of scorigami was very high when the scenario included a score that was rare or uncommon to begin with like "2-2" or "32-2". As soon as a uncommon/rare way of scoring occurs the total score cannot be represented as a linear transformation in the form [3x+7y,3w+7z] which represents the most common ways to score.
+  The strength of the model can be evaluated by predicting the non-scorigami scores and testing whether that result aligns with real data. The prediction of a scorigami with a given initial distribution is difficult to verify because that score has never occurred before. If non-scorigami scores are considered, a state can be given and what states are most likely to be traveled to can be calculated with real data. A simpler approach would involve obtaining the distribution of actual final scores that occurred and comparing that to the state probability distributions produced by the markov chain models.
+  Overall, using markov chains to model unique NFL game scores is possible and produces results that align with the expectations of someone who is reasonably knowledgeable of the NFL. There are definitely more ways to construct the Markov chain compared to what was attempted in this analysis. Future work should focus on analyzing the assumptions made in this analysis in order to reject them or accept them.
 
 # Works Cited
 
@@ -636,12 +406,12 @@ Bois, John. "Every NFL Score Ever | Chart Party". *Youtube*, SB Nation, December
 
 Colon, David. "Jon Bois, editor at SB Nation, on making a career of weird sportswriting". Brokelyn, August 3, 2015. https://brokelyn.com/howd-get-cool-job-jon-bois-sb-nation-making-career-weird-sportswriting/.
 
-Nogle, Kevin. "Football 1010: The one-point safety". The Phinsider, March 3, 2018. https://www.thephinsider.com/2018/3/3/17063556/football-101-the-one-point-safety.
+Horowitz, Marksim. "Introducing the nflscrapR Package". Github, https://github.com/maksimhorowitz/nflscrapR. Accessesd 15 November 2019.
 
 NFL Scorigami. "NFL Scorigami". Dec 2, 2019. https://nflscorigami.com/ Accessed 2 December 2019.
 
-Horowitz, Marksim. "Introducing the nflscrapR Package". Github, https://github.com/maksimhorowitz/nflscrapR. Accessesd 15 November 2019.
+Nogle, Kevin. "Football 1010: The one-point safety". The Phinsider, March 3, 2018. https://www.thephinsider.com/2018/3/3/17063556/football-101-the-one-point-safety.
+
+Pro Football Reference. "All Game Scores in Pro Football History". Dec 2, 2019. https://www.pro-football-reference.com/boxscores/game-scores.htm
 
 Pro Football Reference. "Missing Games in Pro Football History". Dec 2, 2019. https://www.pro-football-reference.com/boxscores/missing-scores.htm Accessed 2 December 2019.
-
-https://seahawkswire.usatoday.com/2018/12/03/seahawks-continue-bizarre-scorigami-streak-under-pete-carroll/
