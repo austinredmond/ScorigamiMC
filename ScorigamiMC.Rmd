@@ -3,8 +3,9 @@ title: "Scorigami!"
 author: "Austin Redmond"
 date: "4/12/2019"
 output:
-  html_document: default
+  word_document: default
   pdf_document: default
+  html_document: default
 email: redmonda6@mymacewa.ca
 subject: 'Stat 322: Finite Markov Chains and Applications'
 subtitle: Using Markov Chains to Model Unique NFL Game Scores
@@ -37,14 +38,23 @@ knitr::opts_chunk$set(echo = TRUE, root.dir = "~/GitHub/ScorigamiMC")
 Call my libary in order to use functions stored in another r script. The listed functions take the form.
 
 game_data(gameIds, gamePlayByPlay)
+
 initial_distribution(states, givenState)
+
 multi_game_scrape(seasons, types, weeks = NULL, teams = NULL)
+
 multi_game_play_by_play(gameIDs)
+
 points_scored_frequency(gameData)
+
 points_scored_observations(pointsScoredFrequency)
+
 scorigami_probability(stateProbabilityDistribution, missingStates)
+
 state_probability_distribution(initialDistribution, transitionMarix, quarters remaining)
+
 transition_matrix_one(states, pointsScoredFrequency)
+
 transition_matrix_two(states, pointsScoredFrequency)
 
 ```{r My Library, message=FALSE}
